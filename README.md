@@ -3,7 +3,7 @@ Setup resizable BAR and then load Windows. WIP if you want to build this you nee
 
 Tested and working on Sapphire Nitro+ RX 580 8GB, Gigabyte B75M-D3H (F16 BIOS 4G decoding on) and i5 3470. 
 
-Minimum requirements should be PCIE 3.0 (Ivy Bridge and newer), supported GPU and 4G decoding on with sufficient free address space.
+Minimum requirements should be PCIE 3.0 (Ivy Bridge and newer), supported GPU and 4G decoding on with sufficient free address space. Visual corruption on Windows boot screen is normal and should display properly once GPU driver loads.
 
 ![AMD Software](amdsoftware.png)
 ![GPU-Z](gpuz.png)
