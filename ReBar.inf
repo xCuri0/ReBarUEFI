@@ -15,9 +15,9 @@
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
+  UefiApplicationEntryPoint
   UefiBootServicesTableLib
   UefiLib
-  UefiApplicationEntryPoint
   PrintLib
   DebugLib
   ShellLib
@@ -25,3 +25,6 @@
 [Protocols]
   gEfiPciRootBridgeIoProtocolGuid
   gEfiLoadedImageProtocolGuid
+
+[BuildOptions]
+	*_*_*_CC_FLAGS = -Wno-unused-label -Wno-unused-but-set-variable -Wno-unused-const-variable

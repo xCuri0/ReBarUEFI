@@ -8,116 +8,19 @@
 #include <Library/UefiShellDebug1CommandsLib/Pci.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DevicePathLib.h>
+#include "include/pciRegs.h"
+#include "include/ioPort.h"
 
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
+#define PCI_COMMAND_DECODE_ENABLE (PCI_COMMAND_MEMORY | PCI_COMMAND_IO)
 
-/*
- * Conventional PCI and PCI-X Mode 1 devices have 256 bytes of
- * configuration space.  PCI-X Mode 2 and PCIe devices have 4096 bytes of
- * configuration space.
- */
-#define PCI_CFG_SPACE_SIZE 256
-#define PCI_CFG_SPACE_EXP_SIZE 4096
-
-/* Extended Capabilities (PCI-X 2.0 and Express) */
-#define PCI_EXT_CAP_ID(header) (header & 0x0000ffff)
-#define PCI_EXT_CAP_VER(header) ((header >> 16) & 0xf)
-#define PCI_EXT_CAP_NEXT(header) ((header >> 20) & 0xffc)
-
-#define PCI_EXT_CAP_ID_REBAR 0x15
-
-#define PCI_REBAR_CAP		4	/* capability register */
-#define  PCI_REBAR_CAP_SIZES		0x00FFFFF0  /* supported BAR sizes */
-#define PCI_REBAR_CTRL		8	/* control register */
-#define  PCI_REBAR_CTRL_BAR_IDX		0x00000007  /* BAR index */
-#define  PCI_REBAR_CTRL_NBAR_MASK	0x000000E0  /* # of resizable BARs */
-#define  PCI_REBAR_CTRL_NBAR_SHIFT	5	    /* shift for # of BARs */
-#define  PCI_REBAR_CTRL_BAR_SIZE	0x00001F00  /* BAR size */
-#define  PCI_REBAR_CTRL_BAR_SHIFT	8	    /* shift for BAR size */
-
-#define PCI_COMMAND		0x04	/* 16 bits */
-#define  PCI_COMMAND_IO		0x1	/* Enable response in I/O space */
-#define  PCI_COMMAND_MEMORY	0x2	/* Enable response in Memory space */
-
-#define IORESOURCE_BITS		0x000000ff	/* Bus-specific bits */
-
-#define IORESOURCE_TYPE_BITS	0x00001f00	/* Resource type */
-#define IORESOURCE_IO		0x00000100	/* PCI/ISA I/O ports */
-#define IORESOURCE_MEM		0x00000200
-#define IORESOURCE_REG		0x00000300	/* Register offsets */
-#define IORESOURCE_IRQ		0x00000400
-#define IORESOURCE_DMA		0x00000800
-#define IORESOURCE_BUS		0x00001000
-
-#define IORESOURCE_PREFETCH	0x00002000	/* No side effects */
-#define IORESOURCE_READONLY	0x00004000
-#define IORESOURCE_CACHEABLE	0x00008000
-#define IORESOURCE_RANGELENGTH	0x00010000
-#define IORESOURCE_SHADOWABLE	0x00020000
-
-#define IORESOURCE_SIZEALIGN	0x00040000	/* size indicates alignment */
-#define IORESOURCE_STARTALIGN	0x00080000	/* start field is alignment */
-
-#define IORESOURCE_MEM_64	0x00100000
-#define IORESOURCE_WINDOW	0x00200000	/* forwarded by bridge */
-#define IORESOURCE_MUXED	0x00400000	/* Resource is software muxed */
-
-#define PCI_ERROR_RESPONSE		(~0ULL)
-#define PCI_SET_ERROR_RESPONSE(val)	(*(val) = ((typeof(*(val))) PCI_ERROR_RESPONSE))
-#define PCI_POSSIBLE_ERROR(val)		((val) == ((typeof(val)) PCI_ERROR_RESPONSE))
-
-#define PCI_BASE_ADDRESS_0	0x10	/* 32 bits */
-#define PCI_BASE_ADDRESS_1	0x14	/* 32 bits [htype 0,1 only] */
-#define PCI_BASE_ADDRESS_2	0x18	/* 32 bits [htype 0 only] */
-#define PCI_BASE_ADDRESS_3	0x1c	/* 32 bits */
-#define PCI_BASE_ADDRESS_4	0x20	/* 32 bits */
-#define PCI_BASE_ADDRESS_5	0x24	/* 32 bits */
-#define  PCI_BASE_ADDRESS_SPACE		0x01	/* 0 = memory, 1 = I/O */
-#define  PCI_BASE_ADDRESS_SPACE_IO	0x01
-#define  PCI_BASE_ADDRESS_SPACE_MEMORY	0x00
-#define  PCI_BASE_ADDRESS_MEM_TYPE_MASK	0x06
-#define  PCI_BASE_ADDRESS_MEM_TYPE_32	0x00	/* 32 bit address */
-#define  PCI_BASE_ADDRESS_MEM_TYPE_1M	0x02	/* Below 1M [obsolete] */
-#define  PCI_BASE_ADDRESS_MEM_TYPE_64	0x04	/* 64 bit address */
-#define  PCI_BASE_ADDRESS_MEM_PREFETCH	0x08	/* prefetchable? */
-#define  PCI_BASE_ADDRESS_MEM_MASK	(~0x0fUL)
-#define  PCI_BASE_ADDRESS_IO_MASK	(~0x03UL)
-
-#define PCI_COMMAND_DECODE_ENABLE	(PCI_COMMAND_MEMORY | PCI_COMMAND_IO)
-
-#define PCI_COMMAND_DECODE_ENABLE	(PCI_COMMAND_MEMORY | PCI_COMMAND_IO)
-#define PCI_MEMORY_BASE		0x20	/* Memory range behind */
-#define PCI_MEMORY_LIMIT	0x22
-#define  PCI_MEMORY_RANGE_TYPE_MASK 0x0fUL
-#define  PCI_MEMORY_RANGE_MASK	(~0x0fUL)
-#define PCI_PREF_MEMORY_BASE	0x24	/* Prefetchable memory range behind */
-#define PCI_PREF_MEMORY_LIMIT	0x26
-#define  PCI_PREF_RANGE_TYPE_MASK 0x0fUL
-#define  PCI_PREF_RANGE_TYPE_32	0x00
-#define  PCI_PREF_RANGE_TYPE_64	0x01
-#define  PCI_PREF_RANGE_MASK	(~0x0fUL)
-#define PCI_PREF_BASE_UPPER32	0x28	/* Upper half of prefetchable memory range */
-#define PCI_PREF_LIMIT_UPPER32	0x2c
-
-// x86
+// x86 specific
 #define IO_SPACE_LIMIT 0xffff
 
-#define PCI_ROM_ADDRESS		0x30	/* Bits 31..11 are address, 10..1 reserved */
-#define  PCI_ROM_ADDRESS_ENABLE	0x01
-#define PCI_ROM_ADDRESS_MASK	(~0x7ffU)
-
-#define IORESOURCE_ROM_ENABLE		(1<<0)	/* ROM is enabled, same as PCI_ROM_ADDRESS_ENABLE */
-#define IORESOURCE_ROM_SHADOW		(1<<1)	/* Use RAM image, not ROM BAR */
-
-#define PCI_HEADER_TYPE		0x0e	/* 8 bits */
-#define  PCI_HEADER_TYPE_MASK		0x7f
-#define  PCI_HEADER_TYPE_NORMAL		0
-#define  PCI_HEADER_TYPE_BRIDGE		1
-#define  PCI_HEADER_TYPE_CARDBUS	2
-
-#define PCI_ROM_ADDRESS1	0x38
-#define PCI_STD_NUM_BARS	6
+#define PCI_ERROR_RESPONSE		(~0ULL)
+#define PCI_POSSIBLE_ERROR(val)		((val) == ((typeof(val)) PCI_ERROR_RESPONSE))
+#define upper_32_bits(n) ((UINT32)(((n) >> 16) >> 16))
 
 EFI_HANDLE iHandle;
 EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
@@ -144,7 +47,6 @@ struct pciDev {
 
 enum pci_bar_type {
 	pci_bar_unknown,	/* Standard PCI BAR probe */
-	pci_bar_io,		/* An I/O port BAR */
 	pci_bar_mem32,		/* A 32-bit memory BAR */
 	pci_bar_mem64,		/* A 64-bit memory BAR */
 };
@@ -158,7 +60,6 @@ enum {
 	PCI_ROM_RESOURCE,
 };
 
-#define upper_32_bits(n) ((UINT32)(((n) >> 16) >> 16))
 
 INTN fls(UINTN x)
 {
@@ -229,7 +130,6 @@ EFI_STATUS pciWriteConfigByte(UINTN pciAddress, INTN pos, UINT8 *buf)
     return pciRootBridgeIo->Pci.Write(pciRootBridgeIo, EfiPciWidthUint8, pciAddrOffset(pciAddress, pos), 1, buf);
 }
 
-
 BOOLEAN isPCIeDevice(UINTN pciAddress)
 {
     UINT8 buf = 0xff;
@@ -274,7 +174,7 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
      * If we have no capabilities, this is indicated by cap ID,
      * cap version and next pointer all being 0. Or it could also be all FF
      */
-    if (header == 0 || header == __UINT32_MAX__)
+    if (header == 0 || PCI_POSSIBLE_ERROR(header))
         return 0;
 
     while (ttl-- > 0)
@@ -367,9 +267,7 @@ UINT64 decodeBar(UINT32 bar)
 	unsigned long flags;
 
 	if ((bar & PCI_BASE_ADDRESS_SPACE) == PCI_BASE_ADDRESS_SPACE_IO) {
-		flags = bar & ~PCI_BASE_ADDRESS_IO_MASK;
-		flags |= IORESOURCE_IO;
-		return flags;
+		return 0;
 	}
 
 	flags = bar & ~PCI_BASE_ADDRESS_MEM_MASK;
@@ -471,8 +369,8 @@ void pciUpdateBAR(struct pciDev *dev, INTN resno, struct pciMemoryRange res)
 	 */
 	disable = (res.flags & IORESOURCE_MEM_64) && !dev->isBridge;
 	if (disable) {
-        val = cmd & ~PCI_COMMAND_MEMORY;
 		pciReadConfigWord(dev->pciAddress, PCI_COMMAND, &cmd);
+		val = cmd & ~PCI_COMMAND_MEMORY;
 		pciWriteConfigWord(dev->pciAddress, PCI_COMMAND, &val);
 	}
 
@@ -554,7 +452,7 @@ void pciReadBridgeMMIOPref(struct pciDev *pDev)
 	}
 }
 
-static void pciSetupBridgeMMIO(struct pciDev *bridge)
+void pciSetupBridgeMMIO(struct pciDev *bridge)
 {
 	UINT32 l;
 
@@ -567,7 +465,7 @@ static void pciSetupBridgeMMIO(struct pciDev *bridge)
 	pciWriteConfigDword(bridge->pciAddress, PCI_MEMORY_BASE, &l);
 }
 
-static void pciSetupBridgeMMIOPref(struct pciDev *bridge)
+void pciSetupBridgeMMIOPref(struct pciDev *bridge)
 {
 	UINT32 l, bu, lu, val;
 
@@ -608,7 +506,7 @@ void pciSetupBridge(struct pciDev *dev)
 
 INTN pciReadBase(UINTN pciAddress, enum pci_bar_type type, UINTN pos, struct pciMemoryRange *barRange, BOOLEAN mmio_always_on) {
     UINT32 l = 0, sz = 0, mask;
-	UINT64 l64, sz64, mask64;
+	UINT64 l64 = 0, sz64 = 0, mask64 = 0;
 	UINT16 orig_cmd;
     UINT32 val;
 
@@ -646,11 +544,7 @@ INTN pciReadBase(UINTN pciAddress, enum pci_bar_type type, UINTN pos, struct pci
 	if (type == 0) {
 		barRange->flags = decodeBar(l);
 		barRange->flags |= IORESOURCE_SIZEALIGN;
-		if (barRange->flags & IORESOURCE_IO) {
-			l64 = l & PCI_BASE_ADDRESS_IO_MASK;
-			sz64 = sz & PCI_BASE_ADDRESS_IO_MASK;
-			mask64 = PCI_BASE_ADDRESS_IO_MASK & (UINT32)IO_SPACE_LIMIT;
-		} else {
+		if (!(barRange->flags & IORESOURCE_IO)) {
 			l64 = l & PCI_BASE_ADDRESS_MEM_MASK;
 			sz64 = sz & PCI_BASE_ADDRESS_MEM_MASK;
 			mask64 = (UINT32)PCI_BASE_ADDRESS_MEM_MASK;
@@ -778,7 +672,7 @@ VOID scanPCIDevices(UINT16 maxBus)
                     break; // no
             }
 
-    UINT16 cmd, val;
+    UINT16 cmd, val = 0;
     UINT64 pDevAddr = 0;
     for (UINTN i = 0; i < cnt; i++)
     {
