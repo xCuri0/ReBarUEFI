@@ -10,6 +10,7 @@
 #include <Library/DevicePathLib.h>
 #include "include/pciRegs.h"
 #include "include/ioPort.h"
+#include "board/board.h"
 
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
@@ -29,19 +30,26 @@ struct pciMemoryRange {
     UINT64 start;
     UINT64 end;
     UINT64 flags;
+	UINT8 resizableSize;
+};
+struct pciBridgeInfo {
+    UINT8 primary;
+    UINT8 secondary;
+    UINT8 subordinate;
 };
 
 struct pciDev {
 	EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
     UINT64 pciAddress;
+	UINT16 vid;
+	UINT16 did;
     struct pciMemoryRange bar[6];
     // linux calls this BAR 6
     struct pciMemoryRange rom;
 	struct pciMemoryRange mmioWindow;
 	struct pciMemoryRange mmioPrefWindow;
-	BOOLEAN resizable;
+	struct pciBridgeInfo bridgeInfo;
 	BOOLEAN isBridge;
-	UINT64 bridgeAddress;
     UINT8 romBaseReg;
 };
 
@@ -229,17 +237,24 @@ INTN pciRebarGetCurrentSize(UINTN pciAddress, UINTN bar)
 	return (ctrl & PCI_REBAR_CTRL_BAR_SIZE) >> PCI_REBAR_CTRL_BAR_SHIFT;
 }
 
-UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN bar)
+#define PCI_VENDOR_ID_ATI		0x1002
+
+UINT32 pciRebarGetPossibleSizes(struct pciDev *pDev, UINTN bar)
 {
     INTN pos;
 	UINT32 cap;
 
-	pos = pciRebarFindPos(pciAddress, bar);
+	pos = pciRebarFindPos(pDev->pciAddress, bar);
 	if (pos < 0)
 		return 0;
 
-	pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap);
+	pciReadConfigDword(pDev->pciAddress, pos + PCI_REBAR_CAP, &cap);
 	cap &= PCI_REBAR_CAP_SIZES;
+
+	/* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
+	if (pDev->vid == PCI_VENDOR_ID_ATI && pDev->did == 0x731f &&
+	    bar == 0 && cap == 0x7000)
+		cap = 0x3f000;
 
 	return cap >> 4;
 }
@@ -452,6 +467,15 @@ void pciReadBridgeMMIOPref(struct pciDev *pDev)
 	}
 }
 
+void pciReadBridgeBus(struct pciDev *pDev) {
+	UINT32 buses;
+	pciReadConfigDword(pDev->pciAddress, PCI_PRIMARY_BUS, &buses);
+
+	pDev->bridgeInfo.primary = buses & 0xFF;
+	pDev->bridgeInfo.secondary = (buses >> 8) & 0xFF;
+	pDev->bridgeInfo.subordinate = (buses >> 16) & 0xFF;
+}
+
 void pciSetupBridgeMMIO(struct pciDev *bridge)
 {
 	UINT32 l;
@@ -603,6 +627,11 @@ void pciReadBases(struct pciDev *pDev, UINTN howmany, INTN rom)
         // we don't need IO ranges
         if (barRange.flags != 0 && ((barRange.flags & IORESOURCE_MEM) || (barRange.flags & IORESOURCE_MEM_64))) {
             pDev->bar[pos] = barRange;
+			UINT32 rbarSizes = pciRebarGetPossibleSizes(pDev, pos);
+			if (rbarSizes)
+				pDev->bar[pos].resizableSize = fls(rbarSizes) - 1;
+			else
+				pDev->bar[pos].resizableSize = 0;
         }
         pos = pos2;
 	}
@@ -615,6 +644,11 @@ void pciReadBases(struct pciDev *pDev, UINTN howmany, INTN rom)
 		pciReadBase(pDev->pciAddress, pci_bar_mem32, rom, &barRange, pDev->isBridge);
         if (barRange.flags != 0 && ((barRange.flags & IORESOURCE_MEM) || (barRange.flags & IORESOURCE_MEM_64))) {
             pDev->rom = barRange;
+			UINT32 rbarSizes = pciRebarGetPossibleSizes(pDev, pos);
+			if (rbarSizes)
+				pDev->bar[pos].resizableSize = fls(rbarSizes) - 1;
+			else
+				pDev->bar[pos].resizableSize = 0;
         }
 	}
 }
@@ -640,14 +674,17 @@ VOID scanPCIDevices(UINT16 maxBus)
 
                 if (vid == 0xFFFF)
                     continue;
+				
+				pciReadConfigWord(pciAddress, 2, &pDev.did);
 
+				pDev.vid = vid;
 				pDev.pciRootBridgeIo = pciRootBridgeIo;
 				pDev.pciAddress = pciAddress;
-				pDev.resizable = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR) > 0;
 
 				pciReadConfigByte(pciAddress, PCI_HEADER_TYPE, &hdr_type);
                 switch (hdr_type & 0x7f)
                 {
+
 				case PCI_HEADER_TYPE_NORMAL:
 					pciReadBases(&pDev, 6, PCI_ROM_ADDRESS);
 					break;
@@ -656,6 +693,7 @@ VOID scanPCIDevices(UINT16 maxBus)
 				 	pciReadBases(&pDev, 2, PCI_ROM_ADDRESS1);
 					pciReadBridgeMMIO(&pDev);
 					pciReadBridgeMMIOPref(&pDev);
+					pciReadBridgeBus(&pDev);
 					break;
 				case PCI_HEADER_TYPE_CARDBUS:
 					pciReadBases(&pDev, 1, 0);
@@ -672,51 +710,109 @@ VOID scanPCIDevices(UINT16 maxBus)
                     break; // no
             }
 
+	#ifdef DXE
     UINT16 cmd, val = 0;
     UINT64 pDevAddr = 0;
+	#endif
     for (UINTN i = 0; i < cnt; i++)
     {
         struct pciDev pDev = pciDevList[i];
 
 		// CHANGE THESE FOR YOUR SYSTEM
         if (!pDev.isBridge) {
-            if (pDev.bar[0].start == 0x600000000 && pDev.resizable) {
+			UINT64 nSize;
+			struct pciMemoryRange Mwindow;
+			BOOLEAN resizableDev = FALSE;
+			for (UINTN j = 0; j < 6; j++)
+        	{
+				struct pciMemoryRange window;
+				struct pciMemoryRange barRange = pDev.bar[j];
+            	if (barRange.start != 0 && (barRange.resizableSize != 0 || resizableDev)) {
+					// find bridge device is on
+					for (UINTN i = 0; i < cnt; i++) {
+						struct pciDev pDevB = pciDevList[i];
+						if (pDevB.isBridge) {
+    						UINT8 bus = (pDev.pciAddress & 0xff000000) >> 24;
+							if (bus >= pDevB.bridgeInfo.secondary && bus <= pDevB.bridgeInfo.subordinate) {
+								Print(L"BAR %u [0x%llx-0x%llx] resizable: %u\n", j, barRange.start, barRange.end, barRange.resizableSize);
+								if (pDevB.mmioWindow.start <= pDev.bar[j].start && pDev.bar[j].end <= pDevB.mmioWindow.end) {
+									window = pDevB.mmioWindow;
+									Print(L"MMIO [0x%llx-0x%llx]\n", pDevB.mmioWindow.start, pDevB.mmioWindow.end);
+								}
+
+								if (pDevB.mmioPrefWindow.start <= pDev.bar[j].start && pDev.bar[j].end <= pDevB.mmioPrefWindow.end) {
+									window = pDevB.mmioPrefWindow;
+									Print(L"MMIOPref [0x%llx-0x%llx]\n", pDevB.mmioPrefWindow.start, pDevB.mmioPrefWindow.end);
+								}
+							}
+						}
+					}
+
+					if (!resizableDev) {
+						Mwindow = window;
+						resizableDev = TRUE;
+						nSize = (1 << barRange.resizableSize);
+						nSize = nSize * 1024 * 1024;
+						pDev.bar[j].start = 0;
+						pDev.bar[j].end = 0;
+					} else {
+						if (window.start == Mwindow.start) {
+							nSize += pDev.bar[j].end - pDev.bar[j].start;
+							pDev.bar[j].start = 0;
+							pDev.bar[j].end = 0;
+						}
+					}
+					Print(L"Size correction needed %llu\n", nSize);
+				}
+			}
+			
+/*             if (pDev.bar[0].start == 0x600000000) {
+				#ifdef DXE
                 pDevAddr = pDev.pciAddress;
+				#endif
+				pDev.bar[0].start = 0x400000000;
+                pDev.bar[2].start = 0x300000000;
+
+				#ifdef DXE
                 pciReadConfigWord(pDev.pciAddress, PCI_COMMAND, &cmd);
                 val = cmd & ~PCI_COMMAND_MEMORY;
                 pciWriteConfigWord(pDev.pciAddress, PCI_COMMAND, &val);
 
-                pDev.bar[0].start = 0x400000000;
-                pciUpdateBAR(&pDev, 0, pDev.bar[0]);
-                pDev.bar[2].start = 0x300000000;
+				pciUpdateBAR(&pDev, 0, pDev.bar[0]);
                 pciUpdateBAR(&pDev, 2, pDev.bar[2]);
+				#endif
 
-
-            }
+            } */
         } else {
-            if (pDev.mmioPrefWindow.start == 0x600000000) {
+/*             if (pDev.mmioPrefWindow.start == 0x600000000) {
                 pDev.mmioPrefWindow.start = 0x300000000;
                 pDev.mmioPrefWindow.end = 0x5ffffffff;
+				#ifdef DXE
                 pciSetupBridgeMMIOPref(&pDev);
-            }
+				#endif
+            } */
         }
-        for (UINTN j = 0; j < 6; j++)
+/*         for (UINTN j = 0; j < 6; j++)
         {
             struct pciMemoryRange barRange = pDev.bar[j];
             if (barRange.start != 0)
-                Print(L"BAR %u [0x%llx-0x%llx]\n", j, barRange.start, barRange.end);
+                Print(L"BAR %u [0x%llx-0x%llx] resizable: %u\n", j, barRange.start, barRange.end, barRange.resizableSize);
         }
         if (pDev.rom.start != 0)
-            Print(L"BAR 6 [0x%llx-0x%llx]\n", pDev.rom.start, pDev.rom.end);
+            Print(L"BAR 6 [0x%llx-0x%llx] resizable: %u\n", pDev.rom.start, pDev.rom.end, pDev.rom.resizableSize);
         
         if (pDev.isBridge) {
             if (pDev.mmioWindow.start != 0)
                 Print(L"MMIO [0x%llx-0x%llx]\n", pDev.mmioWindow.start, pDev.mmioWindow.end);
             if (pDev.mmioPrefWindow.start != 0)
                 Print(L"MMIOPref [0x%llx-0x%llx]\n", pDev.mmioPrefWindow.start, pDev.mmioPrefWindow.end);
-        } 
+
+
+			Print(L"Primary %u, Secondary %u, Subordinate %u\n", pDev.bridgeInfo.primary, pDev.bridgeInfo.secondary, pDev.bridgeInfo.subordinate);
+        }  */
     }
 
+	#ifdef DXE
     if (pDevAddr) {
         INTN rbarsize = pciRebarGetCurrentSize(pDevAddr, 0);
         UINT32 rbarsizes = pciRebarGetPossibleSizes(pDevAddr, 0);
@@ -729,7 +825,9 @@ VOID scanPCIDevices(UINT16 maxBus)
 
         pciWriteConfigWord(pDevAddr, PCI_COMMAND, &cmd);
     }
-    EFI_LOADED_IMAGE* image;
+	#endif
+
+/*     EFI_LOADED_IMAGE* image;
     EFI_HANDLE next_image_handle = 0;
 
     gBS->HandleProtocol(iHandle, &gEfiLoadedImageProtocolGuid, (void**) &image);
@@ -737,7 +835,7 @@ VOID scanPCIDevices(UINT16 maxBus)
     static CHAR16 default_boot_path[] = L"\\EFI\\Microsoft\\Boot\\bootmgfw.efi";
     EFI_DEVICE_PATH* boot_dp = FileDevicePath(image->DeviceHandle, default_boot_path);
     gBS->LoadImage(0, iHandle, boot_dp, 0, 0, &next_image_handle);
-    gBS->StartImage(next_image_handle, 0, 0);
+    gBS->StartImage(next_image_handle, 0, 0); */
 
     FreePool(pciDevList);
 }

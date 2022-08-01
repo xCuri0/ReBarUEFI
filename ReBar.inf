@@ -27,4 +27,5 @@
   gEfiLoadedImageProtocolGuid
 
 [BuildOptions]
-	*_*_*_CC_FLAGS = -Wno-unused-label -Wno-unused-but-set-variable -Wno-unused-const-variable
+  *_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable
+  *_*_*_DLINK_FLAGS     = -flto
