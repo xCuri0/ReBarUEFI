@@ -729,8 +729,8 @@ VOID scanPCIDevices(UINT16 maxBus)
 				struct pciMemoryRange barRange = pDev.bar[j];
             	if (barRange.start != 0 && (barRange.resizableSize != 0 || resizableDev)) {
 					// find bridge device is on
-					for (UINTN i = 0; i < cnt; i++) {
-						struct pciDev pDevB = pciDevList[i];
+					for (UINTN k = 0; k < cnt; k++) {
+						struct pciDev pDevB = pciDevList[k];
 						if (pDevB.isBridge) {
     						UINT8 bus = (pDev.pciAddress & 0xff000000) >> 24;
 							if (bus >= pDevB.bridgeInfo.secondary && bus <= pDevB.bridgeInfo.subordinate) {
@@ -765,51 +765,41 @@ VOID scanPCIDevices(UINT16 maxBus)
 					Print(L"Size correction needed %llu\n", nSize);
 				}
 			}
-			
-/*             if (pDev.bar[0].start == 0x600000000) {
-				#ifdef DXE
-                pDevAddr = pDev.pciAddress;
-				#endif
-				pDev.bar[0].start = 0x400000000;
-                pDev.bar[2].start = 0x300000000;
+			if (resizableDev) {
+				UINTN cnt2 = 0;
+				struct pciMemoryRange *barList = AllocatePool(cnt * 6 * sizeof(struct pciMemoryRange));
+				for (UINTN j = 0; j < cnt; j++) {
+					struct pciDev pDev = pciDevList[j];
+					for (UINTN k = 0; k < 6; k++)
+					{
+						struct pciMemoryRange barRange = pDev.bar[k];
+						if (barRange.start != 0) {
+							cnt2++;
+							barList[cnt2 - 1] = barRange;
+						}
+					}
+				}
+				// sort
+				for (UINTN j = 0; j < cnt2; j++)
+				{
+					for (UINTN k = j+1; k < cnt2; k++)
+					{
+						if (barList[j].start > barList[k].start) {
+							struct pciMemoryRange temp = barList[j];
+							barList[j] = barList[k];
+							barList[k] = temp;
+						}
+					}
+				}
+				for (UINTN j = 0; j < cnt2; j++)
+				{
+					struct pciMemoryRange barRange = barList[j];
+					Print(L"BAR [0x%llx-0x%llx] resizable: %u\n", barRange.start, barRange.end, barRange.resizableSize);
+				}
 
-				#ifdef DXE
-                pciReadConfigWord(pDev.pciAddress, PCI_COMMAND, &cmd);
-                val = cmd & ~PCI_COMMAND_MEMORY;
-                pciWriteConfigWord(pDev.pciAddress, PCI_COMMAND, &val);
-
-				pciUpdateBAR(&pDev, 0, pDev.bar[0]);
-                pciUpdateBAR(&pDev, 2, pDev.bar[2]);
-				#endif
-
-            } */
-        } else {
-/*             if (pDev.mmioPrefWindow.start == 0x600000000) {
-                pDev.mmioPrefWindow.start = 0x300000000;
-                pDev.mmioPrefWindow.end = 0x5ffffffff;
-				#ifdef DXE
-                pciSetupBridgeMMIOPref(&pDev);
-				#endif
-            } */
-        }
-/*         for (UINTN j = 0; j < 6; j++)
-        {
-            struct pciMemoryRange barRange = pDev.bar[j];
-            if (barRange.start != 0)
-                Print(L"BAR %u [0x%llx-0x%llx] resizable: %u\n", j, barRange.start, barRange.end, barRange.resizableSize);
-        }
-        if (pDev.rom.start != 0)
-            Print(L"BAR 6 [0x%llx-0x%llx] resizable: %u\n", pDev.rom.start, pDev.rom.end, pDev.rom.resizableSize);
-        
-        if (pDev.isBridge) {
-            if (pDev.mmioWindow.start != 0)
-                Print(L"MMIO [0x%llx-0x%llx]\n", pDev.mmioWindow.start, pDev.mmioWindow.end);
-            if (pDev.mmioPrefWindow.start != 0)
-                Print(L"MMIOPref [0x%llx-0x%llx]\n", pDev.mmioPrefWindow.start, pDev.mmioPrefWindow.end);
-
-
-			Print(L"Primary %u, Secondary %u, Subordinate %u\n", pDev.bridgeInfo.primary, pDev.bridgeInfo.secondary, pDev.bridgeInfo.subordinate);
-        }  */
+				UINT64 startaddr = 
+			}
+		}
     }
 
 	#ifdef DXE
