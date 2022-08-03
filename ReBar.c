@@ -15,43 +15,47 @@
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
 
-#define PCI_ERROR_RESPONSE		(~0ULL)
-#define PCI_POSSIBLE_ERROR(val)		((val) == ((typeof(val)) PCI_ERROR_RESPONSE))
+#define PCI_ERROR_RESPONSE (~0ULL)
+#define PCI_POSSIBLE_ERROR(val) ((val) == ((typeof(val))PCI_ERROR_RESPONSE))
 
 // for quirk
-#define PCI_VENDOR_ID_ATI		0x1002
+#define PCI_VENDOR_ID_ATI 0x1002
 
 EFI_HANDLE iHandle;
 EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
-
 INTN fls(UINTN x)
 {
-	INTN r = 32;
+    INTN r = 32;
 
-	if (!x)
-		return 0;
-	if (!(x & 0xffff0000u)) {
-		x <<= 16;
-		r -= 16;
-	}
-	if (!(x & 0xff000000u)) {
-		x <<= 8;
-		r -= 8;
-	}
-	if (!(x & 0xf0000000u)) {
-		x <<= 4;
-		r -= 4;
-	}
-	if (!(x & 0xc0000000u)) {
-		x <<= 2;
-		r -= 2;
-	}
-	if (!(x & 0x80000000u)) {
-		x <<= 1;
-		r -= 1;
-	}
-	return r;
+    if (!x)
+        return 0;
+    if (!(x & 0xffff0000u))
+    {
+        x <<= 16;
+        r -= 16;
+    }
+    if (!(x & 0xff000000u))
+    {
+        x <<= 8;
+        r -= 8;
+    }
+    if (!(x & 0xf0000000u))
+    {
+        x <<= 4;
+        r -= 4;
+    }
+    if (!(x & 0xc0000000u))
+    {
+        x <<= 2;
+        r -= 2;
+    }
+    if (!(x & 0x80000000u))
+    {
+        x <<= 1;
+        r -= 1;
+    }
+    return r;
 }
 
 UINT64 pciAddrOffset(UINTN pciAddress, UINTN offset)
@@ -158,77 +162,78 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
 
 INTN pciRebarFindPos(UINTN pciAddress, UINTN pos, UINTN bar)
 {
-	UINTN nbars, i;
-	UINT32 ctrl;
+    UINTN nbars, i;
+    UINT32 ctrl;
 
-	pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
-	nbars = (ctrl & PCI_REBAR_CTRL_NBAR_MASK) >>
-		    PCI_REBAR_CTRL_NBAR_SHIFT;
+    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+    nbars = (ctrl & PCI_REBAR_CTRL_NBAR_MASK) >>
+            PCI_REBAR_CTRL_NBAR_SHIFT;
 
-	for (i = 0; i < nbars; i++, pos += 8) {
-		INTN bar_idx;
+    for (i = 0; i < nbars; i++, pos += 8)
+    {
+        INTN bar_idx;
 
-		pciReadConfigDword(pciAddress,  pos + PCI_REBAR_CTRL, &ctrl);
-		bar_idx = ctrl & PCI_REBAR_CTRL_BAR_IDX;
-		if (bar_idx == bar)
-			return pos;
-	}
-	return -1;
+        pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+        bar_idx = ctrl & PCI_REBAR_CTRL_BAR_IDX;
+        if (bar_idx == bar)
+            return pos;
+    }
+    return -1;
 }
 
 INTN pciRebarGetCurrentSize(UINTN pciAddress, UINTN epos, UINTN bar)
 {
-	INTN pos;
-	UINT32 ctrl;
+    INTN pos;
+    UINT32 ctrl;
 
-	pos = pciRebarFindPos(pciAddress, epos, bar);
-	if (pos < 0)
-		return pos;
+    pos = pciRebarFindPos(pciAddress, epos, bar);
+    if (pos < 0)
+        return pos;
 
-	pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
-	return (ctrl & PCI_REBAR_CTRL_BAR_SIZE) >> PCI_REBAR_CTRL_BAR_SHIFT;
+    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+    return (ctrl & PCI_REBAR_CTRL_BAR_SIZE) >> PCI_REBAR_CTRL_BAR_SHIFT;
 }
 
 UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINTN bar)
 {
     INTN pos;
-	UINT32 cap;
+    UINT32 cap;
 
-	pos = pciRebarFindPos(pciAddress, epos, bar);
-	if (pos < 0)
-		return 0;
+    pos = pciRebarFindPos(pciAddress, epos, bar);
+    if (pos < 0)
+        return 0;
 
-	pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap);
-	cap &= PCI_REBAR_CAP_SIZES;
+    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap);
+    cap &= PCI_REBAR_CAP_SIZES;
 
-	/* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
-	if (vid == PCI_VENDOR_ID_ATI && did == 0x731f &&
-	    bar == 0 && cap == 0x7000)
-		cap = 0x3f000;
+    /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
+    if (vid == PCI_VENDOR_ID_ATI && did == 0x731f &&
+        bar == 0 && cap == 0x7000)
+        cap = 0x3f000;
 
-	return cap >> 4;
+    return cap >> 4;
 }
 
 INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINTN bar, UINTN size)
 {
-	INTN pos;
-	UINT32 ctrl;
+    INTN pos;
+    UINT32 ctrl;
 
-	pos = pciRebarFindPos(pciAddress, epos, bar);
-	if (pos < 0)
-		return pos;
+    pos = pciRebarFindPos(pciAddress, epos, bar);
+    if (pos < 0)
+        return pos;
 
-	pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
-	ctrl &= ~PCI_REBAR_CTRL_BAR_SIZE;
-	ctrl |= size << PCI_REBAR_CTRL_BAR_SHIFT;
+    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+    ctrl &= ~PCI_REBAR_CTRL_BAR_SIZE;
+    ctrl |= size << PCI_REBAR_CTRL_BAR_SHIFT;
 
     pciWriteConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
-	return 0;
+    return 0;
 }
 
 VOID scanPCIDevices(UINT16 maxBus)
 {
-	UINT8 hdr_type;
+    UINT8 hdr_type;
     UINTN bus, fun, dev;
     UINTN pciAddress;
     UINT16 vid, did;
@@ -243,44 +248,49 @@ VOID scanPCIDevices(UINT16 maxBus)
             {
                 pciAddress = EFI_PCI_ADDRESS(bus, dev, fun, 0);
                 pciReadConfigWord(pciAddress, 0, &vid);
-				pciReadConfigWord(pciAddress, 2, &did);
+                pciReadConfigWord(pciAddress, 2, &did);
 
                 if (vid == 0xFFFF)
                     continue;
 
-				if ((epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR))) {
-					for (UINT8 bar = 0; bar < 6; bar++)
-					{
-						UINT8 rBarC = pciRebarGetCurrentSize(pciAddress, epos, bar);
-						UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
-						if (rBarS) {
-							UINT8 maxSize = fls(rBarS) - 1;
+                if ((epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR)))
+                {
+                    for (UINT8 bar = 0; bar < 6; bar++)
+                    {
+                        UINT8 rBarC = pciRebarGetCurrentSize(pciAddress, epos, bar);
+                        UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
+                        if (rBarS)
+                        {
+                            UINT8 maxSize = fls(rBarS) - 1;
                             #ifdef DXE
                             // not sure if we even need to disable decoding before the resources are allocated
-                            if (!cmd) {
+                            if (!cmd)
+                            {
                                 pciReadConfigWord(pciAddress, PCI_COMMAND, &cmd);
                                 val = cmd & ~PCI_COMMAND_MEMORY;
                                 pciWriteConfigWord(pciAddress, PCI_COMMAND, &val);
                             }
 
-							if (maxSize > rBarC) {
-								pciRebarSetSize(pciAddress, epos, bar, maxSize);
-							}
+                            if (maxSize > rBarC)
+                            {
+                                pciRebarSetSize(pciAddress, epos, bar, maxSize);
+                            }
                             #else
-							Print(L"BAR %u RBAR CURRENT %u RBAR MAX %u\n", bar, rBarC, maxSize);
+                            Print(L"BAR %u RBAR CURRENT %u RBAR MAX %u\n", bar, rBarC, maxSize);
                             #endif
-						}
-					}
-				}
+                        }
+                    }
+                }
 
                 #ifdef DXE
-                if (cmd) {
+                if (cmd)
+                {
                     pciWriteConfigWord(pciAddress, PCI_COMMAND, &cmd);
                     cmd = 0;
                 }
                 #endif
 
-				pciReadConfigByte(pciAddress, PCI_HEADER_TYPE, &hdr_type);
+                pciReadConfigByte(pciAddress, PCI_HEADER_TYPE, &hdr_type);
                 if (!fun && ((hdr_type & HEADER_TYPE_MULTI_FUNCTION) == 0))
                     break; // no
             }
@@ -352,11 +362,12 @@ EFI_STATUS EFIAPI uefiMain(
     reBarEnable = reBarEnabled();
 
     #ifndef DXE
-    Print(L"4G DECODING: %u\nResizable BAR: %u\n", mmio4GDecodeEnable, reBarEnable);
+    Print(L"4G Decoding: %u\nResizable BAR: %u\n", mmio4GDecodeEnable, reBarEnable);
     #endif
 
     // If 4G decoding is off PciHostBridge will fail to allocate resources
-    if (mmio4GDecodeEnable && reBarEnable) {
+    if (mmio4GDecodeEnable && reBarEnable)
+    {
         iHandle = imageHandle;
         status = gBS->LocateHandleBuffer(
             ByProtocol,
@@ -369,11 +380,12 @@ EFI_STATUS EFIAPI uefiMain(
         {
             status = gBS->HandleProtocol(handleBuffer[i], &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
             ASSERT_EFI_ERROR(status);
-            status = pciRootBridgeIo->Configuration (pciRootBridgeIo, (VOID **)&descriptors);
+            status = pciRootBridgeIo->Configuration(pciRootBridgeIo, (VOID **)&descriptors);
             ASSERT_EFI_ERROR(status);
 
-            while (TRUE) {
-                status = PciGetNextBusRange (&descriptors, &minBus, &maxBus, &isEnd);
+            while (TRUE)
+            {
+                status = PciGetNextBusRange(&descriptors, &minBus, &maxBus, &isEnd);
                 ASSERT_EFI_ERROR(status);
 
                 if (isEnd || descriptors == NULL)

@@ -2,7 +2,7 @@
 Gigabyte B75M-D3H F16 BIOS module for ReBarUEFI
 */
 #include "../../../include/board.h"
-#define MAX_SETUP_SIZE 1239
+#define MAX_SETUP_SIZE 1222
 
 // EC87D643-EBA4-4BB5-A1E5-3F3E36B20DA9
 GUID setupVariableGuid = {0xEC87D643, 0xEBA4, 0x4BB5, {0xA1, 0xE5, 0x3F, 0x3E, 0x36, 0xB2, 0x0D, 0xA9}};
