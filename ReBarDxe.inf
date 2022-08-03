@@ -7,8 +7,9 @@
   ENTRY_POINT                    = uefiMain
  
 [Sources]  
-  ReBar.c
-   
+  ReBar.c 
+  board/gigabyte/b75m-d3h/f16.c
+
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
@@ -16,6 +17,7 @@
 [LibraryClasses]
   UefiDriverEntryPoint
   UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
   UefiLib
    
 [Protocols]
@@ -26,5 +28,5 @@
   gEfiLoadedImageProtocolGuid
 
 [BuildOptions]
-  *_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable -D DXE
+  *_*_*_CC_FLAGS        = -flto -Wno-unused-but-set-variable -Wno-unused-const-variable -DUSING_LTO -D DXE
   *_*_*_DLINK_FLAGS     = -flto
