@@ -1,6 +1,6 @@
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = ReBar
+  BASE_NAME                      = ReBarDxe
   FILE_GUID                      = adf0508f-a992-4a0f-8b54-0291517c21aa
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
@@ -25,6 +25,7 @@
   gEfiLoadedImageProtocolGuid
 
 [Depex]
+  gEfiPciRootBridgeIoProtocolGuid AND
   gEfiLoadedImageProtocolGuid
 
 [BuildOptions]
