@@ -21,7 +21,6 @@
   UefiRuntimeServicesTableLib
   UefiLib
   PrintLib
-  DebugLib
   ShellLib
    
 [Protocols]
@@ -29,5 +28,7 @@
   gEfiLoadedImageProtocolGuid
 
 [BuildOptions]
-  *_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable
-  *_*_*_DLINK_FLAGS     = -flto
+  GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable
+  GCC:*_*_*_DLINK_FLAGS     = -flto
+  MSFT:*_*_*_CC_FLAGS       = /GL /DUSING_LTO
+  MSFT:*_*_*_DLINK_FLAGS    = /LTCG

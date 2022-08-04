@@ -8,15 +8,11 @@
 #include <Library/DevicePathLib.h>
 #include "include/pciRegs.h"
 #include "include/board.h"
-#ifndef DXE
-#include <Library/ShellLib.h>
-#endif
 
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
 
-#define PCI_ERROR_RESPONSE (~0ULL)
-#define PCI_POSSIBLE_ERROR(val) ((val) == ((typeof(val))PCI_ERROR_RESPONSE))
+#define PCI_POSSIBLE_ERROR(val) ((val) == 0xffffffff)
 
 // for quirk
 #define PCI_VENDOR_ID_ATI 0x1002
@@ -127,7 +123,7 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
 {
     INTN ttl;
     UINT32 header;
-    INTN pos = PCI_CFG_SPACE_SIZE;
+    UINT16 pos = PCI_CFG_SPACE_SIZE;
 
     /* minimum 8 bytes per capability */
     ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
@@ -160,7 +156,7 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
     return 0;
 }
 
-INTN pciRebarFindPos(UINTN pciAddress, UINTN pos, UINTN bar)
+INTN pciRebarFindPos(UINTN pciAddress, UINTN pos, UINT8 bar)
 {
     UINTN nbars, i;
     UINT32 ctrl;
@@ -171,7 +167,7 @@ INTN pciRebarFindPos(UINTN pciAddress, UINTN pos, UINTN bar)
 
     for (i = 0; i < nbars; i++, pos += 8)
     {
-        INTN bar_idx;
+        UINTN bar_idx;
 
         pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
         bar_idx = ctrl & PCI_REBAR_CTRL_BAR_IDX;
@@ -181,20 +177,20 @@ INTN pciRebarFindPos(UINTN pciAddress, UINTN pos, UINTN bar)
     return -1;
 }
 
-INTN pciRebarGetCurrentSize(UINTN pciAddress, UINTN epos, UINTN bar)
+UINT8 pciRebarGetCurrentSize(UINTN pciAddress, UINTN epos, UINT8 bar)
 {
     INTN pos;
     UINT32 ctrl;
 
     pos = pciRebarFindPos(pciAddress, epos, bar);
     if (pos < 0)
-        return pos;
+        return 0;
 
     pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
     return (ctrl & PCI_REBAR_CTRL_BAR_SIZE) >> PCI_REBAR_CTRL_BAR_SHIFT;
 }
 
-UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINTN bar)
+UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINT8 bar)
 {
     INTN pos;
     UINT32 cap;
@@ -214,7 +210,7 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
     return cap >> 4;
 }
 
-INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINTN bar, UINTN size)
+INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
 {
     INTN pos;
     UINT32 ctrl;
@@ -253,7 +249,8 @@ VOID scanPCIDevices(UINT16 maxBus)
                 if (vid == 0xFFFF)
                     continue;
 
-                if ((epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR)))
+                epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
+                if (epos)
                 {
                     for (UINT8 bar = 0; bar < 6; bar++)
                     {
@@ -261,7 +258,7 @@ VOID scanPCIDevices(UINT16 maxBus)
                         UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
                         if (rBarS)
                         {
-                            UINT8 maxSize = fls(rBarS) - 1;
+                            UINT8 maxSize = (UINT8)fls(rBarS) - 1;
                             #ifdef DXE
                             // not sure if we even need to disable decoding before the resources are allocated
                             if (!cmd)
@@ -375,7 +372,7 @@ EFI_STATUS EFIAPI uefiMain(
             NULL,
             &handleCount,
             &handleBuffer);
-        ASSERT_EFI_ERROR(Status);
+        ASSERT_EFI_ERROR(status);
         for (i = 0; i < handleCount; i++)
         {
             status = gBS->HandleProtocol(handleBuffer[i], &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
