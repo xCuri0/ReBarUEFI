@@ -260,16 +260,15 @@ VOID scanPCIDevices(UINT16 maxBus)
                         {
                             UINT8 maxSize = (UINT8)fls(rBarS) - 1;
                             #ifdef DXE
-                            // not sure if we even need to disable decoding before the resources are allocated
-                            if (!cmd)
-                            {
-                                pciReadConfigWord(pciAddress, PCI_COMMAND, &cmd);
-                                val = cmd & ~PCI_COMMAND_MEMORY;
-                                pciWriteConfigWord(pciAddress, PCI_COMMAND, &val);
-                            }
-
                             if (maxSize > rBarC)
                             {
+                                // not sure if we even need to disable decoding before the resources are allocated
+                                if (!cmd)
+                                {
+                                    pciReadConfigWord(pciAddress, PCI_COMMAND, &cmd);
+                                    val = cmd & ~PCI_COMMAND_MEMORY;
+                                    pciWriteConfigWord(pciAddress, PCI_COMMAND, &val);
+                                }
                                 pciRebarSetSize(pciAddress, epos, bar, maxSize);
                             }
                             #else
