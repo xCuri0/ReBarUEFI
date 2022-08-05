@@ -235,7 +235,7 @@ VOID scanPCIDevices(UINT16 maxBus)
     UINT16 vid, did;
     UINTN epos;
     #ifdef DXE
-    UINT16 cmd, val = 0;
+    UINT16 cmd = 0, val = 0;
     #endif
 
     for (bus = 0; bus <= maxBus; bus++)
