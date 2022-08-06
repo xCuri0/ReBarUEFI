@@ -21,7 +21,7 @@
   UefiLib
    
 [Protocols]
-  gEfiPciRootBridgeIoProtocolGuid ## CONSUMES
+  gEfiPciRootBridgeIoProtocolGuid ## SOMETIMES_CONSUMES
 
 [Depex]
   gEfiPciRootBridgeIoProtocolGuid

@@ -19,6 +19,9 @@
 
 EFI_HANDLE iHandle;
 EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
+// events for when protocol loads
+EFI_EVENT pciRootBridgeE;
+VOID* pciRootBridgeR;
 
 INTN fls(UINTN x)
 {
@@ -340,11 +343,7 @@ PciGetNextBusRange(
     return EFI_SUCCESS;
 }
 
-EFI_STATUS EFIAPI rebarInit(
-    IN EFI_HANDLE imageHandle,
-    IN EFI_SYSTEM_TABLE *systemTable)
-{
-
+VOID EFIAPI pciRootBridgeIoProtocolCallback(IN EFI_EVENT event, IN VOID *context) {
     EFI_STATUS status;
     UINTN handleCount;
     EFI_HANDLE *handleBuffer;
@@ -352,8 +351,46 @@ EFI_STATUS EFIAPI rebarInit(
     EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *descriptors;
     UINT16 minBus, maxBus;
     BOOLEAN isEnd;
+
+    status = gBS->LocateHandleBuffer(
+        ByProtocol,
+        &gEfiPciRootBridgeIoProtocolGuid,
+        NULL,
+        &handleCount,
+        &handleBuffer);
+
+    if (EFI_ERROR(status))
+        goto free;
+
+    for (i = 0; i < handleCount; i++)
+    {
+        status = gBS->HandleProtocol(handleBuffer[i], &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
+        ASSERT_EFI_ERROR(status);
+        status = pciRootBridgeIo->Configuration(pciRootBridgeIo, (VOID **)&descriptors);
+        ASSERT_EFI_ERROR(status);
+
+        while (TRUE)
+        {
+            status = PciGetNextBusRange(&descriptors, &minBus, &maxBus, &isEnd);
+            ASSERT_EFI_ERROR(status);
+
+            if (isEnd || descriptors == NULL)
+                break;
+            scanPCIDevices(maxBus);
+        }
+    }
+free:
+    FreePool(handleBuffer);
+    gBS->CloseEvent(event);
+}
+
+EFI_STATUS EFIAPI rebarInit(
+    IN EFI_HANDLE imageHandle,
+    IN EFI_SYSTEM_TABLE *systemTable)
+{
     BOOLEAN mmio4GDecodeEnable, reBarEnable;
 
+    iHandle = imageHandle;
     mmio4GDecodeEnable = mmio4GDecodingEnabled();
     reBarEnable = reBarEnabled();
 
@@ -364,32 +401,14 @@ EFI_STATUS EFIAPI rebarInit(
     // If 4G decoding is off PciHostBridge will fail to allocate resources
     if (mmio4GDecodeEnable && reBarEnable)
     {
-        iHandle = imageHandle;
-        status = gBS->LocateHandleBuffer(
-            ByProtocol,
-            &gEfiPciRootBridgeIoProtocolGuid,
-            NULL,
-            &handleCount,
-            &handleBuffer);
-        ASSERT_EFI_ERROR(status);
-        for (i = 0; i < handleCount; i++)
-        {
-            status = gBS->HandleProtocol(handleBuffer[i], &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
-            ASSERT_EFI_ERROR(status);
-            status = pciRootBridgeIo->Configuration(pciRootBridgeIo, (VOID **)&descriptors);
-            ASSERT_EFI_ERROR(status);
-
-            while (TRUE)
-            {
-                status = PciGetNextBusRange(&descriptors, &minBus, &maxBus, &isEnd);
-                ASSERT_EFI_ERROR(status);
-
-                if (isEnd || descriptors == NULL)
-                    break;
-                scanPCIDevices(maxBus);
-            }
-        }
-        FreePool(handleBuffer);
+        // We need to resize BARs before PciBusDxe can read it
+        pciRootBridgeE = EfiCreateProtocolNotifyEvent (
+                &gEfiPciRootBridgeIoProtocolGuid,
+                TPL_CALLBACK,
+                pciRootBridgeIoProtocolCallback,
+                NULL,
+                &pciRootBridgeR
+                );
     }
     boardFree();
 
