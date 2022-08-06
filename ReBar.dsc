@@ -9,7 +9,7 @@
 	SKUID_IDENTIFIER = DEFAULT
 	
 [Components]
-	ReBarUEFI/ReBar.inf
+	ReBarUEFI/ReBarTest.inf
 	ReBarUEFI/ReBarDxe.inf
 	
 !include MdePkg/MdeLibs.dsc.inc

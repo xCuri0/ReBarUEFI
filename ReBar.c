@@ -340,7 +340,7 @@ PciGetNextBusRange(
     return EFI_SUCCESS;
 }
 
-EFI_STATUS EFIAPI uefiMain(
+EFI_STATUS EFIAPI rebarInit(
     IN EFI_HANDLE imageHandle,
     IN EFI_SYSTEM_TABLE *systemTable)
 {

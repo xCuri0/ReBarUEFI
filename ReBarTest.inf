@@ -1,34 +1,33 @@
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = ReBar
+  BASE_NAME                      = ReBarTest
   FILE_GUID                      = aee2d367-6ee5-47fe-9221-ad1308b6313f
-  MODULE_TYPE                    = UEFI_APPLICATION
+  MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = uefiMain
+  ENTRY_POINT                    = rebarInit
  
 [Sources]  
-  ReBar.c
+  ReBar.c 
   board/gigabyte/b75m-d3h/f16.c
-   
+
 [Packages]
   MdePkg/MdePkg.dec
-  ShellPkg/ShellPkg.dec
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
-  UefiApplicationEntryPoint
+  UefiDriverEntryPoint
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiLib
-  PrintLib
-  ShellLib
    
 [Protocols]
+  gEfiPciRootBridgeIoProtocolGuid ## CONSUMES
+
+[Depex]
   gEfiPciRootBridgeIoProtocolGuid
-  gEfiLoadedImageProtocolGuid
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable
   GCC:*_*_*_DLINK_FLAGS     = -flto
   MSFT:*_*_*_CC_FLAGS       = /GL /DUSING_LTO
-  MSFT:*_*_*_DLINK_FLAGS    = /LTCG
+  MSFT:*_*_*_DLINK_FLAGS    = /LTCG /NOCOFFGRPINFO /BASE:0x180000000
