@@ -379,9 +379,9 @@ VOID EFIAPI pciRootBridgeIoProtocolCallback(IN EFI_EVENT event, IN VOID *context
             scanPCIDevices(maxBus);
         }
     }
+    gBS->CloseEvent(event);
 free:
     FreePool(handleBuffer);
-    gBS->CloseEvent(event);
 }
 
 EFI_STATUS EFIAPI rebarInit(
