@@ -15,14 +15,14 @@
 // for quirk
 #define PCI_VENDOR_ID_ATI 0x1002
 
-EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
-EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
+static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
+static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
 // events for when protocol loads
-EFI_EVENT pciRootBridgeResE;
-VOID *pciRootBridgeResR;
+static EFI_EVENT pciRootBridgeResE;
+static VOID *pciRootBridgeResR;
 
-EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_NOTIFY_PHASE  o_NotifyPhase;
+static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_NOTIFY_PHASE  o_NotifyPhase;
 
 INTN fls(UINTN x)
 {
@@ -58,14 +58,14 @@ INTN fls(UINTN x)
     return r;
 }
 
-UINT64 pciAddrOffset(UINTN pciAddress, UINTN offset)
+UINT64 pciAddrOffset(UINTN pciAddress, INTN offset)
 {
     UINTN reg = (pciAddress & 0xffffffff00000000) >> 32;
     UINTN bus = (pciAddress & 0xff000000) >> 24;
     UINTN dev = (pciAddress & 0xff0000) >> 16;
     UINTN func = (pciAddress & 0xff00) >> 8;
 
-    return EFI_PCI_ADDRESS(bus, dev, func, reg + offset);
+    return EFI_PCI_ADDRESS(bus, dev, func, ((INT64)reg + offset));
 }
 
 // created these functions to make it easy to read as we are adapting alot of code from Linux
@@ -102,7 +102,7 @@ BOOLEAN isPCIeDevice(UINTN pciAddress)
 {
     UINT8 buf = 0xff;
     UINT16 offset = CAP_POINTER;
-    UINTN tempPciAddress;
+    INTN tempPciAddress;
 
     pciReadConfigByte(pciAddress, offset, &buf);
     offset = buf;
@@ -160,7 +160,7 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
     return 0;
 }
 
-INTN pciRebarFindPos(UINTN pciAddress, UINTN pos, UINT8 bar)
+INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
 {
     UINTN nbars, i;
     UINT32 ctrl;
@@ -186,7 +186,7 @@ UINT8 pciRebarGetCurrentSize(UINTN pciAddress, UINTN epos, UINT8 bar)
     INTN pos;
     UINT32 ctrl;
 
-    pos = pciRebarFindPos(pciAddress, epos, bar);
+    pos = pciRebarFindPos(pciAddress, (INTN)epos, bar);
     if (pos < 0)
         return 0;
 
@@ -199,7 +199,7 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
     INTN pos;
     UINT32 cap;
 
-    pos = pciRebarFindPos(pciAddress, epos, bar);
+    pos = pciRebarFindPos(pciAddress, (INTN)epos, bar);
     if (pos < 0)
         return 0;
 
@@ -219,13 +219,13 @@ INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
     INTN pos;
     UINT32 ctrl;
 
-    pos = pciRebarFindPos(pciAddress, epos, bar);
+    pos = pciRebarFindPos(pciAddress, (INTN)epos, bar);
     if (pos < 0)
         return pos;
 
     pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
-    ctrl &= ~PCI_REBAR_CTRL_BAR_SIZE;
-    ctrl |= size << PCI_REBAR_CTRL_BAR_SHIFT;
+    ctrl &= (UINT32)~PCI_REBAR_CTRL_BAR_SIZE;
+    ctrl |= (UINT32)size << PCI_REBAR_CTRL_BAR_SHIFT;
 
     pciWriteConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
     return 0;
@@ -272,7 +272,7 @@ VOID scanPCIDevices(UINT16 maxBus)
                                 if (!cmd)
                                 {
                                     pciReadConfigWord(pciAddress, PCI_COMMAND, &cmd);
-                                    val = cmd & ~PCI_COMMAND_MEMORY;
+                                    val = cmd & (UINT16)~PCI_COMMAND_MEMORY;
                                     pciWriteConfigWord(pciAddress, PCI_COMMAND, &val);
                                 }
                                 pciRebarSetSize(pciAddress, epos, bar, maxSize);
