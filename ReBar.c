@@ -22,7 +22,6 @@ EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 EFI_EVENT pciRootBridgeResE;
 VOID *pciRootBridgeResR;
 
-BOOLEAN enumerated = FALSE;
 EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_NOTIFY_PHASE  o_NotifyPhase;
 
 INTN fls(UINTN x)
@@ -392,12 +391,10 @@ EFI_STATUS EFIAPI NotifyPhaseOverride (
     IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
     IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PHASE Phase)
 {
-
     DEBUG((DEBUG_INFO, "ReBarDXE: Hooked NotifyPhase called %d\n", Phase));
 
     // Before resource allocation
-    if (Phase == EfiPciHostBridgeBeginResourceAllocation && !enumerated) {
-        enumerated = TRUE;
+    if (Phase == EfiPciHostBridgeBeginResourceAllocation) {
         reBarEnumerate();
 
         DEBUG((DEBUG_INFO, "ReBarDXE: Restoring original NotifyPhase\n"));
