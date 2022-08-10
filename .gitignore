@@ -16,3 +16,4 @@ uefimount/
 NvVars
 *.efi
 *.iso
+*.log

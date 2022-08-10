@@ -28,7 +28,7 @@
   gEfiPciRootBridgeIoProtocolGuid
 
 [BuildOptions]
-  GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable
+  GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable -Wextra -Wno-unused-parameter 
   GCC:*_*_*_DLINK_FLAGS     = -flto
   MSFT:*_*_*_CC_FLAGS       = /GL /DUSING_LTO
   MSFT:*_*_*_DLINK_FLAGS    = /LTCG /NOCOFFGRPINFO /BASE:0x180000000

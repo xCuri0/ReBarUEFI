@@ -1,11 +1,8 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DebugLib.h>
-#include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <IndustryStandard/Pci22.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/DevicePathLib.h>
 #include "include/pciRegs.h"
 #include "include/board.h"
 #include "include/PciHostBridgeResourceAllocation.h"
