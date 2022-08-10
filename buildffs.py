@@ -9,11 +9,15 @@ name = "ReBarDxe"
 version = "1.0"
 GUID = "a8ee1777-a4f5-4345-9da4-13742084d31e"
 shell = sys.platform == "win32"
+buildtype = "RELEASE"
+
+if len(sys.argv) > 1:
+    buildtype = sys.argv[1]
 
 os.chdir("..")
-subprocess.run(["build", "--platform=ReBarUEFI/ReBar.dsc", "--arch=X64", "--buildtarget=RELEASE"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
+subprocess.run(["build", "--platform=ReBarUEFI/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
 
-ReBarDXE = glob.glob("./Build/ReBarUEFI/RELEASE_*/X64/ReBarDxe.efi")
+ReBarDXE = glob.glob(f"./Build/ReBarUEFI/{buildtype}_*/X64/ReBarDxe.efi")
 
 if len(ReBarDXE) != 1:
     print("Build failed")

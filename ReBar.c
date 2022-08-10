@@ -8,6 +8,7 @@
 #include <Library/DevicePathLib.h>
 #include "include/pciRegs.h"
 #include "include/board.h"
+#include "include/PciHostBridgeResourceAllocation.h"
 
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
@@ -17,11 +18,15 @@
 // for quirk
 #define PCI_VENDOR_ID_ATI 0x1002
 
-EFI_HANDLE iHandle;
+EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
+
 // events for when protocol loads
-EFI_EVENT pciRootBridgeE;
-VOID* pciRootBridgeR;
+EFI_EVENT pciRootBridgeResE;
+VOID *pciRootBridgeResR;
+
+BOOLEAN enumerated = FALSE;
+EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_NOTIFY_PHASE  o_NotifyPhase;
 
 INTN fls(UINTN x)
 {
@@ -241,6 +246,7 @@ VOID scanPCIDevices(UINT16 maxBus)
     UINT16 cmd = 0, val = 0;
     #endif
 
+    DEBUG((DEBUG_INFO, "ReBarDXE: PCI root bridge enumeration started\n"));
     for (bus = 0; bus <= maxBus; bus++)
         for (dev = 0; dev <= PCI_MAX_DEVICE; dev++)
             for (fun = 0; fun <= PCI_MAX_FUNC; fun++)
@@ -252,6 +258,7 @@ VOID scanPCIDevices(UINT16 maxBus)
                 if (vid == 0xFFFF)
                     continue;
 
+                DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
                 epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
                 if (epos)
                 {
@@ -343,7 +350,8 @@ PciGetNextBusRange(
     return EFI_SUCCESS;
 }
 
-VOID EFIAPI pciRootBridgeIoProtocolCallback(IN EFI_EVENT event, IN VOID *context) {
+VOID EFIAPI reBarEnumerate()
+{
     EFI_STATUS status;
     UINTN handleCount;
     EFI_HANDLE *handleBuffer;
@@ -379,7 +387,63 @@ VOID EFIAPI pciRootBridgeIoProtocolCallback(IN EFI_EVENT event, IN VOID *context
             scanPCIDevices(maxBus);
         }
     }
+free:
+    FreePool(handleBuffer);
+}
+
+EFI_STATUS EFIAPI NotifyPhaseOverride (
+    IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
+    IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PHASE Phase)
+{
+
+    DEBUG((DEBUG_INFO, "ReBarDXE: Hooked NotifyPhase called %d\n", Phase));
+
+    // Before resource allocation
+    if (Phase == EfiPciHostBridgeBeginResourceAllocation && !enumerated) {
+        enumerated = TRUE;
+        reBarEnumerate();
+
+        DEBUG((DEBUG_INFO, "ReBarDXE: Restoring original NotifyPhase\n"));
+        // restore the original function. we don't need it anymore
+        pciResAlloc->NotifyPhase = o_NotifyPhase;
+    }
+
+    // call the original method
+    return o_NotifyPhase(This, Phase);
+}
+
+VOID EFIAPI pciHostBridgeResourceAllocationProtocolCallback(IN EFI_EVENT event, IN VOID *context)
+{
+    EFI_STATUS status;
+    UINTN handleCount;
+    EFI_HANDLE *handleBuffer;
+
+    status = gBS->LocateHandleBuffer(
+        ByProtocol,
+        &gEfiPciHostBridgeResourceAllocationProtocolGuid,
+        NULL,
+        &handleCount,
+        &handleBuffer);
+
+    if (EFI_ERROR(status))
+        goto free;
+
+    status = gBS->OpenProtocol(
+        handleBuffer[0],
+        &gEfiPciHostBridgeResourceAllocationProtocolGuid,
+        (VOID **)&pciResAlloc,
+        gImageHandle,
+        NULL,
+        EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+    DEBUG((DEBUG_INFO, "ReBarDXE: Hooking NotifyPhase\n"));
+
+    // Hook NotifyPhase
+    o_NotifyPhase = pciResAlloc->NotifyPhase;
+    pciResAlloc->NotifyPhase = &NotifyPhaseOverride;
+
     gBS->CloseEvent(event);
+
 free:
     FreePool(handleBuffer);
 }
@@ -390,25 +454,25 @@ EFI_STATUS EFIAPI rebarInit(
 {
     BOOLEAN mmio4GDecodeEnable, reBarEnable;
 
-    iHandle = imageHandle;
     mmio4GDecodeEnable = mmio4GDecodingEnabled();
     reBarEnable = reBarEnabled();
 
-    #ifndef DXE
+#ifndef DXE
     Print(L"4G Decoding: %u\nResizable BAR: %u\n", mmio4GDecodeEnable, reBarEnable);
-    #endif
+#endif
+
+    DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
 
     // If 4G decoding is off PciHostBridge will fail to allocate resources
     if (mmio4GDecodeEnable && reBarEnable)
     {
-        // We need to resize BARs before PciBusDxe can read it
-        pciRootBridgeE = EfiCreateProtocolNotifyEvent (
-                &gEfiPciRootBridgeIoProtocolGuid,
-                TPL_CALLBACK,
-                pciRootBridgeIoProtocolCallback,
-                NULL,
-                &pciRootBridgeR
-                );
+        // For overriding PciHostBridgeResourceAllocationProtocol
+        pciRootBridgeResE = EfiCreateProtocolNotifyEvent(
+            &gEfiPciHostBridgeResourceAllocationProtocolGuid,
+            TPL_CALLBACK,
+            pciHostBridgeResourceAllocationProtocolCallback,
+            NULL,
+            &pciRootBridgeResR);
     }
     boardFree();
 
