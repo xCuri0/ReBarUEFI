@@ -400,6 +400,9 @@ EFI_STATUS EFIAPI NotifyPhaseOverride (
     IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
     IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PHASE Phase)
 {
+    // call the original method
+    EFI_STATUS status = o_NotifyPhase(This, Phase);
+
     DEBUG((DEBUG_INFO, "ReBarDXE: Hooked NotifyPhase called %d\n", Phase));
 
     // Before resource allocation
@@ -407,12 +410,11 @@ EFI_STATUS EFIAPI NotifyPhaseOverride (
         reBarEnumerate();
 
         DEBUG((DEBUG_INFO, "ReBarDXE: Restoring original NotifyPhase\n"));
-        // restore the original function. we don't need it anymore
+        // restore the original function. we don't need hook anymore
         pciResAlloc->NotifyPhase = o_NotifyPhase;
     }
 
-    // call the original method
-    return o_NotifyPhase(This, Phase);
+    return status;
 }
 
 VOID EFIAPI pciHostBridgeResourceAllocationProtocolCallback(IN EFI_EVENT event, IN VOID *context)
