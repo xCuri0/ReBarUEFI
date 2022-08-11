@@ -271,12 +271,13 @@ VOID scanPCIDevices(UINT16 maxBus)
                     {
                         UINT8 rBarC = pciRebarGetCurrentSize(pciAddress, epos, bar);
                         UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
-                        if (rBarS)
-                        {
-                            UINT8 maxSize = (UINT8)fls(rBarS) - 1;
-                            #ifdef DXE
-                            if (maxSize > rBarC)
-                            {
+                        if (!rBarS)
+                            continue;
+                        // start with size from fls
+                        for (UINT8 n = MIN((UINT8)fls(rBarS) - 1, reBarState); n > 0; n--) {
+                            // check if the size is different from current and supported
+                            if (n != rBarC && (rBarS & (1 << n))) {
+                                #ifdef DXE
                                 // not sure if we even need to disable decoding before the resources are allocated
                                 if (!cmd)
                                 {
@@ -284,11 +285,12 @@ VOID scanPCIDevices(UINT16 maxBus)
                                     val = cmd & (UINT16)~PCI_COMMAND_MEMORY;
                                     pciWriteConfigWord(pciAddress, PCI_COMMAND, &val);
                                 }
-                                pciRebarSetSize(pciAddress, epos, bar, maxSize);
+                                pciRebarSetSize(pciAddress, epos, bar, n);
+                                #else
+                                Print(L"BAR %u RBAR CURRENT %u RBAR MAX %u RBAR NEW %u\n", bar, rBarC, fls(rBarS) - 1, n);
+                                #endif
+                                break;
                             }
-                            #else
-                            Print(L"BAR %u RBAR CURRENT %u RBAR MAX %u\n", bar, rBarC, maxSize);
-                            #endif
                         }
                     }
                 }
