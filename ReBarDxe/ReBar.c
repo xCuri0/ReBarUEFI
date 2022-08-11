@@ -1,10 +1,12 @@
+#include <Uefi.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/DebugLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <IndustryStandard/Pci22.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/DebugLib.h>
 #include "include/pciRegs.h"
-#include "include/board.h"
 #include "include/PciHostBridgeResourceAllocation.h"
 
 #define CAP_POINTER 0x34
@@ -14,6 +16,13 @@
 
 // for quirk
 #define PCI_VENDOR_ID_ATI 0x1002
+
+// a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
+GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
+
+// 0: disabled
+// >0: maximum BAR size (2^x) set to value. UINT8_MAX for unlimited
+UINT8 reBarState = 0;
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
@@ -446,20 +455,24 @@ EFI_STATUS EFIAPI rebarInit(
     IN EFI_HANDLE imageHandle,
     IN EFI_SYSTEM_TABLE *systemTable)
 {
-    BOOLEAN mmio4GDecodeEnable, reBarEnable;
-
-    mmio4GDecodeEnable = mmio4GDecodingEnabled();
-    reBarEnable = reBarEnabled();
-
-#ifndef DXE
-    Print(L"4G Decoding: %u\nResizable BAR: %u\n", mmio4GDecodeEnable, reBarEnable);
-#endif
+    UINTN bufferSize;
+    EFI_STATUS status;
+    UINT32 attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
+            
+    // Read ReBarState variable
+    status = gRT->GetVariable(L"ReBarState", &reBarStateGuid, 
+        &attributes,
+        &bufferSize, &reBarState);
 
-    // If 4G decoding is off PciHostBridge will fail to allocate resources
-    if (mmio4GDecodeEnable && reBarEnable)
+    if (status != EFI_SUCCESS)
+        reBarState = 0;
+
+    if (reBarState)
     {
+        DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", reBarState));
+        #ifdef DXE
         // For overriding PciHostBridgeResourceAllocationProtocol
         pciRootBridgeResE = EfiCreateProtocolNotifyEvent(
             &gEfiPciHostBridgeResourceAllocationProtocolGuid,
@@ -467,8 +480,10 @@ EFI_STATUS EFIAPI rebarInit(
             pciHostBridgeResourceAllocationProtocolCallback,
             NULL,
             &pciRootBridgeResR);
+        #else
+        reBarEnumerate();
+        #endif
     }
-    boardFree();
 
     return EFI_SUCCESS;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# convert uuid to C structure
+# convert uuid to C structure. couldn't find any way to generate guid structure on linux so made this uwu
 # usage
-# ./uuidconv.py EC87D643-EBA4-4BB5-A1E5-3F3E36B20DA9
+# ./uuidconv.py a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
 
 import sys
 

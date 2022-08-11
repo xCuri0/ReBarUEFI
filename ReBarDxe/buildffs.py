@@ -14,8 +14,8 @@ buildtype = "RELEASE"
 if len(sys.argv) > 1:
     buildtype = sys.argv[1]
 
-os.chdir("..")
-subprocess.run(["build", "--platform=ReBarUEFI/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
+os.chdir("../..")
+subprocess.run(["build", "--platform=ReBarUEFI/ReBarDxe/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
 
 ReBarDXE = glob.glob(f"./Build/ReBarUEFI/{buildtype}_*/X64/ReBarDxe.efi")
 

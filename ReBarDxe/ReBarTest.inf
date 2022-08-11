@@ -1,14 +1,13 @@
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = ReBarDxe
-  FILE_GUID                      = adf0508f-a992-4a0f-8b54-0291517c21aa
+  BASE_NAME                      = ReBarTest
+  FILE_GUID                      = aee2d367-6ee5-47fe-9221-ad1308b6313f
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = rebarInit
  
 [Sources]  
-  ReBar.c 
-  board/gigabyte/b75m-d3h/f16.c
+  ReBar.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -28,10 +27,7 @@
   gEfiPciRootBridgeIoProtocolGuid
 
 [BuildOptions]
-  GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable -Wextra -Wno-unused-parameter -DDXE
+  GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable -Wextra -Wno-unused-parameter 
   GCC:*_*_*_DLINK_FLAGS     = -flto
-  MSFT:*_*_*_CC_FLAGS       = /GL /DUSING_LTO /analyze /W4 /DDXE
+  MSFT:*_*_*_CC_FLAGS       = /GL /DUSING_LTO /analyze /W4
   MSFT:*_*_*_DLINK_FLAGS    = /LTCG /NOCOFFGRPINFO /BASE:0x180000000
-  GCC:RELEASE_*_*_CC_FLAGS   = -DMDEPKG_NDEBUG
-  INTEL:RELEASE_*_*_CC_FLAGS = /D MDEPKG_NDEBUG
-  MSFT:RELEASE_*_*_CC_FLAGS  = /D MDEPKG_NDEBUG
