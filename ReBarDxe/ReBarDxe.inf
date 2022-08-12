@@ -29,6 +29,7 @@
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS        = -flto -DUSING_LTO -Wno-unused-but-set-variable -Wno-unused-const-variable -Wextra -Wno-unused-parameter -DDXE
   GCC:*_*_*_DLINK_FLAGS     = -flto
+  GCC:*_CLANGPDB_*_CC_FLAGS = -Weverything -Wno-documentation -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-reserved-macro-identifier -Wno-gnu-zero-variadic-macro-arguments -Wno-padded -Wno-reserved-identifier -Wno-strict-prototypes -Wno-documentation-pedantic -Wno-unused-macros
   MSFT:*_*_*_CC_FLAGS       = /GL /DUSING_LTO /analyze /W4 /DDXE
   MSFT:*_*_*_DLINK_FLAGS    = /LTCG /NOCOFFGRPINFO /BASE:0x180000000
   GCC:RELEASE_*_*_CC_FLAGS   = -DMDEPKG_NDEBUG

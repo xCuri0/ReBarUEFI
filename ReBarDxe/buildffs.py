@@ -12,7 +12,7 @@ shell = sys.platform == "win32"
 buildtype = "RELEASE"
 
 if len(sys.argv) > 1:
-    buildtype = sys.argv[1]
+    buildtype = sys.argv[1].upper()
 
 os.chdir("../..")
 subprocess.run(["build", "--platform=ReBarUEFI/ReBarDxe/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)

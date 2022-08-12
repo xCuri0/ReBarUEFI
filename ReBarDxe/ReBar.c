@@ -18,18 +18,20 @@
 #define PCI_VENDOR_ID_ATI 0x1002
 
 // a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
-GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
+static GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
 
 // 0: disabled
 // >0: maximum BAR size (2^x) set to value. UINT8_MAX for unlimited
-UINT8 reBarState = 0;
+static UINT8 reBarState = 0;
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
+#ifdef DXE
 // events for when protocol loads
 static EFI_EVENT pciRootBridgeResE;
 static VOID *pciRootBridgeResR;
+#endif
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_NOTIFY_PHASE  o_NotifyPhase;
 
