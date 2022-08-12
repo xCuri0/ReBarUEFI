@@ -461,19 +461,24 @@ EFI_STATUS EFIAPI rebarInit(
     IN EFI_HANDLE imageHandle,
     IN EFI_SYSTEM_TABLE *systemTable)
 {
-    UINTN bufferSize;
+    UINTN bufferSize = 1;
     EFI_STATUS status;
-    UINT32 attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
+    UINT32 attributes;
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
-            
+
     // Read ReBarState variable
-    status = gRT->GetVariable(L"ReBarState", &reBarStateGuid, 
+    status = gRT->GetVariable(L"ReBarState", &reBarStateGuid,
         &attributes,
         &bufferSize, &reBarState);
 
+    // any attempts to overflow reBarState should result in EFI_BUFFER_TOO_SMALL
     if (status != EFI_SUCCESS)
         reBarState = 0;
+
+    #ifndef DXE
+    Print(L"ReBarState val:%u len:%u status:%u\n", reBarState, bufferSize, status);
+    #endif
 
     if (reBarState)
     {
