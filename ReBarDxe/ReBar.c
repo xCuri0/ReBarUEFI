@@ -8,6 +8,8 @@
 #include <Library/DebugLib.h>
 #include "include/pciRegs.h"
 #include "include/PciHostBridgeResourceAllocation.h"
+#include <Library/PrintLib.h>
+#include <Library/IoLib.h>
 
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
@@ -27,13 +29,7 @@ static UINT8 reBarState = 0;
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
-#ifdef DXE
-// events for when protocol loads
-static EFI_EVENT pciRootBridgeResE;
-static VOID *pciRootBridgeResR;
-#endif
-
-static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_NOTIFY_PHASE  o_NotifyPhase;
+static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER o_PreprocessController;
 
 INTN fls(UINTN x)
 {
@@ -242,187 +238,64 @@ INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
     return 0;
 }
 
-VOID scanPCIDevices(UINT16 maxBus)
+VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
 {
-    UINT8 hdr_type;
-    UINTN bus, fun, dev;
-    UINTN pciAddress;
-    UINT16 vid, did;
     UINTN epos;
-    #ifdef DXE
-    UINT16 cmd = 0, val = 0;
-    #endif
+    UINT16 vid, did;
+    UINTN pciAddress;
 
-    DEBUG((DEBUG_INFO, "ReBarDXE: PCI root bridge enumeration started\n"));
-    for (bus = 0; bus <= maxBus; bus++)
-        for (dev = 0; dev <= PCI_MAX_DEVICE; dev++)
-            for (fun = 0; fun <= PCI_MAX_FUNC; fun++)
-            {
-                pciAddress = EFI_PCI_ADDRESS(bus, dev, fun, 0);
-                pciReadConfigWord(pciAddress, 0, &vid);
-                pciReadConfigWord(pciAddress, 2, &did);
+    gBS->HandleProtocol(handle, &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
 
-                if (vid == 0xFFFF)
-                    continue;
+    pciAddress = EFI_PCI_ADDRESS(addrInfo.Bus, addrInfo.Device, addrInfo.Function, 0);
+    pciReadConfigWord(pciAddress, 0, &vid);
+    pciReadConfigWord(pciAddress, 2, &did);
 
-                DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
-                epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
-                if (epos)
-                {
-                    for (UINT8 bar = 0; bar < 6; bar++)
-                    {
-                        UINT8 rBarC = pciRebarGetCurrentSize(pciAddress, epos, bar);
-                        UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
-                        if (!rBarS)
-                            continue;
-                        // start with size from fls
-                        for (UINT8 n = MIN((UINT8)fls(rBarS) - 1, reBarState); n > 0; n--) {
-                            // check if the size is different from current and supported
-                            if (n != rBarC && (rBarS & (1 << n))) {
-                                #ifdef DXE
-                                // not sure if we even need to disable decoding before the resources are allocated
-                                if (!cmd)
-                                {
-                                    pciReadConfigWord(pciAddress, PCI_COMMAND, &cmd);
-                                    val = cmd & (UINT16)~PCI_COMMAND_MEMORY;
-                                    pciWriteConfigWord(pciAddress, PCI_COMMAND, &val);
-                                }
-                                pciRebarSetSize(pciAddress, epos, bar, n);
-                                #else
-                                Print(L"BAR %u RBAR CURRENT %u RBAR MAX %u RBAR NEW %u\n", bar, rBarC, fls(rBarS) - 1, n);
-                                #endif
-                                break;
-                            }
-                        }
-                    }
+    DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
+
+    epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
+    if (epos)
+    {
+        for (UINT8 bar = 0; bar < 6; bar++)
+        {
+            UINT8 rBarC = pciRebarGetCurrentSize(pciAddress, epos, bar);
+            UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
+            if (!rBarS)
+                continue;
+            // start with size from fls
+            for (UINT8 n = MIN((UINT8)fls(rBarS) - 1, reBarState); n > 0; n--) {
+                // check if the size is different from current and supported
+                if (n != rBarC && (rBarS & (1 << n))) {
+                    pciRebarSetSize(pciAddress, epos, bar, n);
+                    break;
                 }
-
-                #ifdef DXE
-                if (cmd)
-                {
-                    pciWriteConfigWord(pciAddress, PCI_COMMAND, &cmd);
-                    cmd = 0;
-                }
-                #endif
-
-                pciReadConfigByte(pciAddress, PCI_HEADER_TYPE, &hdr_type);
-                if (!fun && ((hdr_type & HEADER_TYPE_MULTI_FUNCTION) == 0))
-                    break; // no
             }
-}
-
-EFI_STATUS
-PciGetNextBusRange(
-    IN OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **Descriptors,
-    OUT UINT16 *MinBus,
-    OUT UINT16 *MaxBus,
-    OUT BOOLEAN *IsEnd)
-{
-    *IsEnd = FALSE;
-
-    //
-    // When *Descriptors is NULL, Configuration() is not implemented, so assume
-    // range is 0~PCI_MAX_BUS
-    //
-    if ((*Descriptors) == NULL)
-    {
-        *MinBus = 0;
-        *MaxBus = PCI_MAX_BUS;
-        return EFI_SUCCESS;
-    }
-
-    //
-    // *Descriptors points to one or more address space descriptors, which
-    // ends with a end tagged descriptor. Examine each of the descriptors,
-    // if a bus typed one is found and its bus range covers bus, this handle
-    // is the handle we are looking for.
-    //
-
-    while ((*Descriptors)->Desc != ACPI_END_TAG_DESCRIPTOR)
-    {
-        if ((*Descriptors)->ResType == ACPI_ADDRESS_SPACE_TYPE_BUS)
-        {
-            *MinBus = (UINT16)(*Descriptors)->AddrRangeMin;
-            *MaxBus = (UINT16)(*Descriptors)->AddrRangeMax;
-            (*Descriptors)++;
-            return (EFI_SUCCESS);
-        }
-
-        (*Descriptors)++;
-    }
-
-    if ((*Descriptors)->Desc == ACPI_END_TAG_DESCRIPTOR)
-    {
-        *IsEnd = TRUE;
-    }
-
-    return EFI_SUCCESS;
-}
-
-VOID EFIAPI reBarEnumerate()
-{
-    EFI_STATUS status;
-    UINTN handleCount;
-    EFI_HANDLE *handleBuffer;
-    UINTN i;
-    EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *descriptors;
-    UINT16 minBus, maxBus;
-    BOOLEAN isEnd;
-
-    status = gBS->LocateHandleBuffer(
-        ByProtocol,
-        &gEfiPciRootBridgeIoProtocolGuid,
-        NULL,
-        &handleCount,
-        &handleBuffer);
-
-    if (EFI_ERROR(status))
-        goto free;
-
-    for (i = 0; i < handleCount; i++)
-    {
-        status = gBS->HandleProtocol(handleBuffer[i], &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
-        ASSERT_EFI_ERROR(status);
-        status = pciRootBridgeIo->Configuration(pciRootBridgeIo, (VOID **)&descriptors);
-        ASSERT_EFI_ERROR(status);
-
-        while (TRUE)
-        {
-            status = PciGetNextBusRange(&descriptors, &minBus, &maxBus, &isEnd);
-            ASSERT_EFI_ERROR(status);
-
-            if (isEnd || descriptors == NULL)
-                break;
-            scanPCIDevices(maxBus);
         }
     }
-free:
-    FreePool(handleBuffer);
 }
 
-EFI_STATUS EFIAPI NotifyPhaseOverride (
-    IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-    IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PHASE Phase)
+EFI_STATUS EFIAPI PreprocessControllerOverride (
+  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN  EFI_HANDLE                                        RootBridgeHandle,
+  IN  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS       PciAddress,
+  IN  EFI_PCI_CONTROLLER_RESOURCE_ALLOCATION_PHASE      Phase
+  )
 {
     // call the original method
-    EFI_STATUS status = o_NotifyPhase(This, Phase);
+    EFI_STATUS status = o_PreprocessController(This, RootBridgeHandle, PciAddress, Phase);
 
-    DEBUG((DEBUG_INFO, "ReBarDXE: Hooked NotifyPhase called %d\n", Phase));
+    DEBUG((DEBUG_INFO, "ReBarDXE: Hooked PreprocessController called %d\n", Phase));
 
-    // Before resource allocation
-    if (Phase == EfiPciHostBridgeBeginResourceAllocation) {
-        reBarEnumerate();
-
-        DEBUG((DEBUG_INFO, "ReBarDXE: Restoring original NotifyPhase\n"));
-        // restore the original function. we don't need hook anymore
-        pciResAlloc->NotifyPhase = o_NotifyPhase;
+    // EDK2 PciBusDxe setups Resizable BAR twice so we will do same
+    if (Phase <= EfiPciBeforeResourceCollection) {
+        reBarSetupDevice(RootBridgeHandle, PciAddress);
     }
 
     return status;
 }
 
-VOID EFIAPI pciHostBridgeResourceAllocationProtocolCallback(IN EFI_EVENT event, IN VOID *context)
+BOOLEAN pciHostBridgeResourceAllocationProtocolHook()
 {
+    BOOLEAN ret = FALSE;
     EFI_STATUS status;
     UINTN handleCount;
     EFI_HANDLE *handleBuffer;
@@ -445,16 +318,19 @@ VOID EFIAPI pciHostBridgeResourceAllocationProtocolCallback(IN EFI_EVENT event, 
         NULL,
         EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 
-    DEBUG((DEBUG_INFO, "ReBarDXE: Hooking NotifyPhase\n"));
+    if (EFI_ERROR(status))
+        goto free;
 
-    // Hook NotifyPhase
-    o_NotifyPhase = pciResAlloc->NotifyPhase;
-    pciResAlloc->NotifyPhase = &NotifyPhaseOverride;
+    DEBUG((DEBUG_INFO, "ReBarDXE: Hooking EfiPciHostBridgeResourceAllocationProtocol->PreprocessController\n"));
 
-    gBS->CloseEvent(event);
+    // Hook PreprocessController
+    o_PreprocessController = pciResAlloc->PreprocessController;
+    pciResAlloc->PreprocessController = &PreprocessControllerOverride;
 
+    ret = TRUE;
 free:
     FreePool(handleBuffer);
+    return ret;
 }
 
 EFI_STATUS EFIAPI rebarInit(
@@ -476,24 +352,19 @@ EFI_STATUS EFIAPI rebarInit(
     if (status != EFI_SUCCESS)
         reBarState = 0;
 
-    #ifndef DXE
-    Print(L"ReBarState val:%u len:%u status:%u\n", reBarState, bufferSize, status);
-    #endif
-
     if (reBarState)
     {
         DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", reBarState));
-        #ifdef DXE
+        /* We need to override the last function called by PreprocessController.
+        We will look for functions in this order.
+        PciOverrideProtocol->PlatformPrepController (ChipsetExit) (not found on some firmware)
+        PciPlatformProtocol->PlatformPrepController (ChipsetExit) (seems standard on Intel atleast)
+        PciResAlloc->PreprocessController (EfiPciBeforeChildBusEnumeration) (standard on EDK2)
+        */
+
+
         // For overriding PciHostBridgeResourceAllocationProtocol
-        pciRootBridgeResE = EfiCreateProtocolNotifyEvent(
-            &gEfiPciHostBridgeResourceAllocationProtocolGuid,
-            TPL_CALLBACK,
-            pciHostBridgeResourceAllocationProtocolCallback,
-            NULL,
-            &pciRootBridgeResR);
-        #else
-        reBarEnumerate();
-        #endif
+        pciHostBridgeResourceAllocationProtocolHook();
     }
 
     return EFI_SUCCESS;
