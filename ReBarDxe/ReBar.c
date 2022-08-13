@@ -8,8 +8,6 @@
 #include <Library/DebugLib.h>
 #include "include/pciRegs.h"
 #include "include/PciHostBridgeResourceAllocation.h"
-#include <Library/PrintLib.h>
-#include <Library/IoLib.h>
 
 #define CAP_POINTER 0x34
 #define PCIE_DEVICE 0x10
@@ -250,6 +248,9 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
     pciReadConfigWord(pciAddress, 0, &vid);
     pciReadConfigWord(pciAddress, 2, &did);
 
+    if (vid == 0xFFFF)
+        return;
+
     DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
 
     epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
@@ -293,9 +294,8 @@ EFI_STATUS EFIAPI PreprocessControllerOverride (
     return status;
 }
 
-BOOLEAN pciHostBridgeResourceAllocationProtocolHook()
+VOID pciHostBridgeResourceAllocationProtocolHook()
 {
-    BOOLEAN ret = FALSE;
     EFI_STATUS status;
     UINTN handleCount;
     EFI_HANDLE *handleBuffer;
@@ -327,10 +327,8 @@ BOOLEAN pciHostBridgeResourceAllocationProtocolHook()
     o_PreprocessController = pciResAlloc->PreprocessController;
     pciResAlloc->PreprocessController = &PreprocessControllerOverride;
 
-    ret = TRUE;
 free:
     FreePool(handleBuffer);
-    return ret;
 }
 
 EFI_STATUS EFIAPI rebarInit(
@@ -355,14 +353,6 @@ EFI_STATUS EFIAPI rebarInit(
     if (reBarState)
     {
         DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", reBarState));
-        /* We need to override the last function called by PreprocessController.
-        We will look for functions in this order.
-        PciOverrideProtocol->PlatformPrepController (ChipsetExit) (not found on some firmware)
-        PciPlatformProtocol->PlatformPrepController (ChipsetExit) (seems standard on Intel atleast)
-        PciResAlloc->PreprocessController (EfiPciBeforeChildBusEnumeration) (standard on EDK2)
-        */
-
-
         // For overriding PciHostBridgeResourceAllocationProtocol
         pciHostBridgeResourceAllocationProtocolHook();
     }
