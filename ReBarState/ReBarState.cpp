@@ -1,15 +1,29 @@
 ﻿#include <iostream>
-#include <Windows.h>
 #include <string>
-
-bool notExist = false;
+#include <cmath>
 
 #ifdef _MSC_VER
+#include <Windows.h>
+#else
+#include <unistd.h>
+#include <linux/fs.h>
+#include <sys/ioctl.h>
+#endif
+
+#define QUOTE(x) #x
+#define STR(x) QUOTE(x)
+
+#define VNAME ReBarState
+#define VGUID A3C5B77A-C88F-4A93-BF1C-4A92A32C65CE
 
 #define VARIABLE_ATTRIBUTE_NON_VOLATILE 0x00000001
 #define VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS 0x00000002
 #define VARIABLE_ATTRIBUTE_RUNTIME_ACCESS 0x00000004
 
+bool notExist = false;
+
+// Windows
+#ifdef _MSC_VER
 bool CheckPriviledge()
 {
 	DWORD len;
@@ -61,24 +75,81 @@ bool WriteState(uint8_t rBarState) {
 
 	return SetFirmwareEnvironmentVariableEx(name, guid, &rBarState, size, dwAttributes) != 0;
 }
+// Linux
+#else
+
+#define REBARPATH /sys/firmware/efi/efivars/VNAME-VGUID
+#define REBARPS STR(REBARPATH)
+
+struct __attribute__((__packed__)) rebarVar {
+	uint32_t attr;
+	uint8_t value;
+};
+
+bool CheckPriviledge() {
+	return getuid() == 0;
+}
+
+uint8_t GetState() {
+	uint8_t rebarState[5];
+
+	FILE* f = fopen(REBARPS, "rb");
+
+	if (!(f && (fread(&rebarState, 5, 1, f) == 1))) {
+		rebarState[4] = 0;
+		notExist = true;
+	} else
+		fclose(f);
+
+	return rebarState[4];
+}
+
+bool WriteState(uint8_t rBarState) {
+	int attr;
+	rebarVar rVar;
+	FILE* f = fopen(REBARPS, "rb");
+
+	if (f) {
+		// remove immuteable flag that linux sets on all unknown efi variables
+		ioctl(fileno(f), FS_IOC_GETFLAGS, &attr);
+		attr &= ~FS_IMMUTABLE_FL;
+		ioctl(fileno(f), FS_IOC_SETFLAGS, &attr);
+
+		if (remove(REBARPS) != 0) {
+			std::cout << "Failed to remove old variable\n";
+			return false;
+		}
+	}
+
+	f = fopen(REBARPS, "wb");
+
+	rVar.attr = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
+	rVar.value = rBarState;	
+
+	return fwrite(&rVar, sizeof(rVar), 1, f) == 1;;
+}
 #endif
 
 
 int main()
 {
-	std::string i;
+	int ret = 0;
+	std::string i;	
 	uint8_t reBarState;
 
 	if (!CheckPriviledge()) {
 		std::cout << "Failed to obtain EFI variable access try running as admin/root\n";
-		std::cin.get();
-		return 1;
+		ret = 1;
+		goto exit;
 	}
 
 	reBarState = GetState();
 
 	if (!notExist) {
-		std::cout << "Current ReBarState " << +reBarState << "\n";
+		if (reBarState == 0)
+			std::cout << "Current ReBarState " << +reBarState << " / Disabled\n";
+		else
+			std::cout << "Current ReBarState " << +reBarState << " / " << std::pow(2, reBarState) << " MB \n";
 	}
 
 	std::cout << "\nVerify that 4G Decoding is enabled otherwise system will not POST with GPU. There is also a possibility of BIOS not supporting large BARs even with 4G decoding enabled.\n";
@@ -87,8 +158,19 @@ int main()
 
 	std::getline(std::cin, i);
 
+	if (std::stoi(i) > 32) {
+		std::cout << "Invalid value\n";
+		goto exit;
+	}
 	reBarState = std::stoi(i);
-	std::cout << "Writing value of " << pow(2, reBarState) << "MB to ReBarState \n\n";
+
+	if (reBarState < 20)
+		if (reBarState == 0)
+			std::cout << "Writing value of 0 / Disabled to ReBarState \n\n";
+		else
+			std::cout << "Writing value of " << +reBarState << " / " << std::pow(2, reBarState) << " MB to ReBarState \n\n";
+	else
+		std::cout << "Writing value to ReBarState \n\n";
 
 	if (WriteState(reBarState)) {
 		std::cout << "Successfully wrote ReBarState UEFI variable\n";
@@ -97,6 +179,13 @@ int main()
 		std::cout << "Failed to write ReBarState UEFI variable\n";
 	}
 
+	// Linux will probably be run from terminal not requiring this
+	#ifdef _MSC_VER_
 	std::cout << "You can close the app now\n";
+exit:
 	std::cin.get();
+	#else
+exit:
+	#endif
+	return ret;
 }

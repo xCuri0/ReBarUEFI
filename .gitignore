@@ -18,3 +18,4 @@ NvVars
 *.iso
 *.log
 out/
+build/
