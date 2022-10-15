@@ -1,5 +1,5 @@
 # ReBarUEFI
-DXE driver to enable resizable BAR on systems which don't support it officially.
+DXE driver to enable Resizable BAR on systems which don't support it officially. This is done by hooking ```PreprocessController``` which is called for every PCI device during boot and setting up the Resizable BAR control registers.
 
 ### Requirements
 * PCIe 3.0 (Ivy Bridge+)
@@ -17,3 +17,10 @@ Once running the modified firmware and 4G Decoding is enabled run ReBarState (fo
 
 ### Build
 Use the provided buildffs.py script after cloning inside an edk2 tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake.
+
+## Credit
+Linux kernel especially the amdgpu driver
+
+EDK2 for the base that all OEM UEFI follows making hooking easier
+
+QEMU/OVMF made testing hooking way easier although it doesn't have resizable BAR devices
