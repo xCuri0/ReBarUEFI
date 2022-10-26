@@ -4,7 +4,7 @@ DXE driver to enable Resizable BAR on systems which don't support it officially.
 ### Requirements
 * PCIe 3.0 (Ivy Bridge+)
 * 4G Decoding enabled
-* BIOS support for Large BARs (often limited to 2GB)
+* (optional) BIOS support for Large BARs (often limited to 2GB)
 
 
 ### Usage
