@@ -18,6 +18,19 @@ Once running the modified firmware and 4G Decoding is enabled run ReBarState (fo
 ### Build
 Use the provided buildffs.py script after cloning inside an edk2 tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake.
 
+### FAQ
+#### Why don't BAR sizes above x size work ?
+If you can't use 4GB and larger sizes it means your BIOS doesn't support large BARs. If you can't use above 1GB then either 4G decoding is disabled or your BIOS isn't allocating your GPU in the 64-bit region. It needs to be figured out how to patch the BIOS to remove these artificial limitations.
+
+#### Will less than optimal BAR sizes still give a performance increase ?
+On my system with an i5 3470 and Sapphire Nitro+ RX 580 8GB with Nimez drivers/registry edit I get an upto 12% FPS increase with 2GB BAR size. It appears AMD requires a minimum of 2GB BAR for the driver to take advantage of it not sure about Nvidia.
+
+#### I set an unsupported BAR size and my system won't boot
+CMOS reset should fix it but in some motherboards it doesn't which means you will have to either boot with iGPU only or use BIOS flashback/recovery.
+
+#### Will it work on x system ?
+As long as you have 4G decode try it and see. If you don't have 4G decode visible you can check the hidden BIOS settings with [Universal IFR Extractor](https://github.com/LongSoft/Universal-IFR-Extractor/releases) and set it using [grub-mod-setup_var](https://github.com/datasone/grub-mod-setup_var).
+
 ## Credit
 Linux kernel especially the amdgpu driver
 
