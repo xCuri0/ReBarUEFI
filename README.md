@@ -8,12 +8,20 @@ DXE driver to enable Resizable BAR on systems which don't support it officially.
 
 
 ### Usage
-Use [UEFITool (non NE)](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to insert the FFS from [Releases](https://github.com/xCuri0/ReBarUEFI/releases) into the DXE driver section and flash the modified firmware.
+Use [UEFITool (non NE)](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to insert the FFS from [Releases](https://github.com/xCuri0/ReBarUEFI/releases) into the end of the DXE driver section and flash the modified firmware.
 
 For more information on inserting FFS DXE modules you can check the guide for inserting NVMe modules on [win-raid forum](https://winraid.level1techs.com/t/howto-get-full-nvme-support-for-all-systems-with-an-ami-uefi-bios/30901).
 
 
 Once running the modified firmware and 4G Decoding is enabled run ReBarState (found in Releases) and set the Resizable BAR size.
+
+#### UEFI Patching
+Most UEFI firmwares have problems handling BARs larger than 2GB so several patches were created to fix these issues. You can use [UEFIPatch](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to apply these patches located in the UEFIPatch folder. Some patches which may cause issues are commented and need to be manually uncommented.
+
+#### ASUS no boot after patching
+Using UEFIPatch can cause issues with the 16 byte aligned modules in ASUS firmwares (see UEFITool [bug #231](https://github.com/LongSoft/UEFITool/issues/231)). 
+
+You can workaround this by extracting the modified DXE driver module FFS (extract as-is) in UEFITool and using MMTool on an unpatched BIOS to replace the same module with the extracted FFS. Thanks [@romulus2k4](https://github.com/romulus2k4) for discovering and testing this method.
 
 ### Build
 Use the provided buildffs.py script after cloning inside an edk2 tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake.
