@@ -16,10 +16,10 @@ For more information on inserting FFS DXE modules you can check the guide for in
 
 Once running the modified firmware and 4G Decoding is enabled run ReBarState (found in Releases) and set the Resizable BAR size.
 
-#### UEFI Patching
+### UEFI Patching
 Most UEFI firmwares have problems handling BARs larger than 2GB so several patches were created to fix these issues. You can use [UEFIPatch](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to apply these patches located in the UEFIPatch folder. Some patches which may cause issues are commented and need to be manually uncommented.
 
-### Working patches
+#### Working patches
 * <4GB BAR size limit removal
 * <16GB BAR size limit removal
 * Increase MMIO space from 16GB to full usage of 64GB range (Ivy Bridge) (may require DSDT modification so commented by default)
@@ -45,7 +45,7 @@ CMOS reset should fix it but in some motherboards it doesn't which means you wil
 #### Will it work on x system ?
 As long as you have 4G decode try it and see. If you don't have 4G decode visible you can check the hidden BIOS settings with [Universal IFR Extractor](https://github.com/LongSoft/Universal-IFR-Extractor/releases) and set it using [grub-mod-setup_var](https://github.com/datasone/grub-mod-setup_var).
 
-## Credit
+### Credit
 Linux kernel especially the amdgpu driver
 
 EDK2 for the base that all OEM UEFI follows making hooking easier
