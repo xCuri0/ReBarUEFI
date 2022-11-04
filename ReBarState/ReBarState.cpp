@@ -177,10 +177,13 @@ int main()
 	}
 	else {
 		std::cout << "Failed to write ReBarState UEFI variable\n";
+		#ifdef _MSC_VER
+		std::cout << "GetLastError: " << GetLastError() << "\n";
+		#endif
 	}
 
 	// Linux will probably be run from terminal not requiring this
-	#ifdef _MSC_VER_
+	#ifdef _MSC_VER
 	std::cout << "You can close the app now\n";
 exit:
 	std::cin.get();
