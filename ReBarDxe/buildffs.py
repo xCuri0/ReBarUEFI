@@ -11,12 +11,32 @@ GUID = "a8ee1777-a4f5-4345-9da4-13742084d31e"
 shell = sys.platform == "win32"
 buildtype = "RELEASE"
 
+
+def filesub(filep, f, r):
+    # Read in the file
+    with open(filep, 'r') as file :
+        filedata = file.read()
+
+    # Replace the target string
+    filedata = filedata.replace(f, r)
+
+    # Write the file out again
+    with open(filep, 'w') as file:
+        file.write(filedata)
+
 if len(sys.argv) > 1:
     buildtype = sys.argv[1].upper()
 
 # 3 arguments = Github Actions
 if len(sys.argv) == 3:
-    print("TODO setup Conf/target.txt")
+    print("TARGET: ", os.environ['TARGET'])
+    print("TARGET_ARCH: ", os.environ['TARGET_ARCH'])
+    print("TOOL_CHAIN_TAG: ", os.environ['TOOL_CHAIN_TAG'])
+
+    # setup Conf/target.txt
+    filesub("./Conf/target.txt", "DEBUG", os.environ['TARGET'])
+    filesub("./Conf/target.txt", "IA32", os.environ['TARGET_ARCH'])
+    filesub("./Conf/target.txt", "VS2015x86", os.environ['TOOL_CHAIN_TAG'])
 else:
     os.chdir("../..")
 
