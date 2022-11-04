@@ -1,0 +1,43 @@
+name: ReBarDxe EDK2
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+env:
+  TARGET: RELEASE
+  TARGET_ARCH: X64
+  TOOL_CHAIN_TAG: VS2019
+
+jobs:
+  rebardxe-windows:
+    runs-on: windows-2019
+
+    steps:
+    - uses: actions/setup-python@v4.3.0
+
+    - name: Download edk2
+      uses: actions/checkout@v3
+      with:
+        repository: 'tianocore/edk2'
+        ref: 'edk2-stable202208'
+        submodules: 'recursive'
+        
+    - name: Download RebarUEFI
+      uses: actions/checkout@v3
+      with:
+        path: '.\RebarUEFI\'
+
+    - name: Setup EDK2
+      run: .\edksetup.bat Rebuild
+      
+    - name: Build RebarDxe
+      working-directory: .\ReBarUEFI\ReBarDxe\
+      run: python3 buildffs.py
+
+    - name: Upload ReBarDxe artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: ReBarDxe
+        path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2019/X64/ReBarDxe.ffs
