@@ -22,7 +22,7 @@ Most UEFI firmwares have problems handling BARs larger than 2GB so several patch
 #### Working patches
 * <4GB BAR size limit removal
 * <16GB BAR size limit removal
-* Increase MMIO space from 16GB to full usage of 64GB range (Ivy Bridge) (may require DSDT modification so commented by default)
+* Increase MMIO space from 16GB to full usage of 64GB range (Ivy Bridge) (may require DSDT modification so commented by default). See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) for more information.
 
 #### ASUS no boot after patching
 Using UEFIPatch can cause issues with the 16 byte aligned modules in ASUS firmwares (see UEFITool [bug #231](https://github.com/LongSoft/UEFITool/issues/231)). 
@@ -30,7 +30,7 @@ Using UEFIPatch can cause issues with the 16 byte aligned modules in ASUS firmwa
 You can workaround this by extracting the modified DXE driver module FFS (extract as-is) in UEFITool and using MMTool on an unpatched BIOS to replace the same module with the extracted FFS. Thanks [@romulus2k4](https://github.com/romulus2k4) for discovering and testing this method.
 
 ### Build
-Use the provided buildffs.py script after cloning inside an edk2 tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake.
+Use the provided buildffs.py script after cloning inside an edk2 tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake. See wiki page [Building](https://github.com/xCuri0/ReBarUEFI/wiki/Building) for more information.
 
 ### FAQ
 #### Why don't BAR sizes above x size work ?
