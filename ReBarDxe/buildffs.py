@@ -14,7 +14,12 @@ buildtype = "RELEASE"
 if len(sys.argv) > 1:
     buildtype = sys.argv[1].upper()
 
-os.chdir("../..")
+# 3 arguments = Github Actions
+if len(sys.argv) == 3:
+    print("TODO setup Conf/target.txt")
+else:
+    os.chdir("../..")
+
 subprocess.run(["build", "--platform=ReBarUEFI/ReBarDxe/ReBar.dsc"], shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
 
 ReBarDXE = glob.glob(f"./Build/ReBarUEFI/{buildtype}_*/X64/ReBarDxe.efi")

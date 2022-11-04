@@ -33,8 +33,7 @@ jobs:
       run: .\edksetup.bat Rebuild
       
     - name: Build RebarDxe
-      working-directory: .\ReBarUEFI\ReBarDxe\
-      run: python3 buildffs.py
+      run: .\ReBarUEFI\.github\workflows\buildffs.bat
 
     - name: Upload ReBarDxe artifact
       uses: actions/upload-artifact@master
