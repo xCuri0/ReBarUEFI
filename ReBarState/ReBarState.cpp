@@ -137,6 +137,7 @@ int main()
 	std::string i;	
 	uint8_t reBarState;
 
+	std::cout << "ReBarState (c) 2022 xCuri0\n\n";
 	if (!CheckPriviledge()) {
 		std::cout << "Failed to obtain EFI variable access try running as admin/root\n";
 		ret = 1;
@@ -151,10 +152,13 @@ int main()
 		else
 			std::cout << "Current ReBarState " << +reBarState << " / " << std::pow(2, reBarState) << " MB \n";
 	}
+	else {
+		std::cout << "ReBarState variable doesn't exist / Disabled\n";
+	}
 
 	std::cout << "\nVerify that 4G Decoding is enabled otherwise system will not POST with GPU. There is also a possibility of BIOS not supporting large BARs even with 4G decoding enabled.\n";
 	std::cout << "\nIt is recommended to first try smaller sizes above 256MB in case BIOS doesn't support large BARs.\n";
-	std::cout << "\nEnter ReBarState Value\n 0: Disabled \n>0: Maximum BAR size set to 2^x MB \n 32: Unlimited BAR size\n\n";
+	std::cout << "\nEnter ReBarState Value\n       0: Disabled \nAbove  0: Maximum BAR size set to 2^x MB \nAbove 19: Unlimited BAR size\n\n";
 
 	std::getline(std::cin, i);
 
