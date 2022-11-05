@@ -4,9 +4,8 @@ DXE driver to enable Resizable BAR on systems which don't support it officially.
 ![screenshot showing cpu-z, gpu-z and amd software](rebar.png)
 ### Requirements
 * PCIe 3.0 (Ivy Bridge+)
-* 4G Decoding enabled
+* 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it.
 * (optional) BIOS support for Large BARs (often limited to 2GB)
-
 
 ### Usage
 Use [UEFITool (non NE)](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to insert the FFS from [Releases](https://github.com/xCuri0/ReBarUEFI/releases) into the end of the DXE driver section and flash the modified firmware.
@@ -15,6 +14,11 @@ For more information on inserting FFS DXE modules you can check the guide for in
 
 
 Once running the modified firmware and 4G Decoding is enabled run ReBarState (found in Releases) and set the Resizable BAR size.
+
+### X99 Tutorial by Miyconst
+[![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjEE "Resizable BAR on LGA 2011-3 X99")
+
+Instructions for applying UEFIPatch not included as it isn't required for these X99 motherboards. You can follow them below.
 
 ### UEFI Patching
 Most UEFI firmwares have problems handling BARs larger than 2GB so several patches were created to fix these issues. You can use [UEFIPatch](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to apply these patches located in the UEFIPatch folder. Some patches which may cause issues are commented and need to be manually uncommented.
