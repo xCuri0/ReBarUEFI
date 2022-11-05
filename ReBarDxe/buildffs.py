@@ -4,6 +4,7 @@ import sys
 import glob
 import subprocess
 import glob
+from pefile import PE
 
 name = "ReBarDxe"
 version = "1.0"
@@ -23,6 +24,18 @@ def filesub(filep, f, r):
     # Write the file out again
     with open(filep, 'w') as file:
         file.write(filedata)
+
+def set_bit(data, bit):
+    """Sets a specific bit."""
+    return data | (1 << bit)
+
+def set_nx_compat_flag(pe):
+    """Sets the nx_compat flag to 1 in the PE/COFF file."""
+    dllchar = pe.OPTIONAL_HEADER.DllCharacteristics
+    dllchar = set_bit(dllchar, 8)  # 8th bit is the nx_compat_flag
+    pe.OPTIONAL_HEADER.DllCharacteristics = dllchar
+    pe.merge_modified_section_data()
+    return pe
 
 if len(sys.argv) > 1:
     buildtype = sys.argv[1].upper()
@@ -47,6 +60,13 @@ ReBarDXE = glob.glob(f"./Build/ReBarUEFI/{buildtype}_*/X64/ReBarDxe.efi")
 if len(ReBarDXE) != 1:
     print("Build failed")
     sys.exit(1)
+
+# set NX_COMPAT
+pe = PE(ReBarDXE[0])
+set_nx_compat_flag(pe)
+
+os.remove(ReBarDXE[0])
+pe.write(ReBarDXE[0])
 
 print(ReBarDXE[0])
 print("Building FFS")

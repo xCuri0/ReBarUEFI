@@ -16,6 +16,7 @@ jobs:
 
     steps:
     - uses: actions/setup-python@v4.3.0
+    - run: pip install pefile
 
     - name: Download edk2
       uses: actions/checkout@v3
