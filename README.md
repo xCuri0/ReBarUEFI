@@ -13,7 +13,7 @@ Use [UEFITool (non NE)](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0
 For more information on inserting FFS DXE modules you can check the guide for inserting NVMe modules on [win-raid forum](https://winraid.level1techs.com/t/howto-get-full-nvme-support-for-all-systems-with-an-ami-uefi-bios/30901).
 
 
-Once running the modified firmware and 4G Decoding is enabled run ReBarState (found in Releases) and set the Resizable BAR size. **If Resizable BAR works for you reply to [List of working motherboards](https://github.com/xCuri0/ReBarUEFI/issues/11) so I can add it to the list.**
+Once running the modified firmware with **4G decoding enabled and CSM off** run ReBarState (found in Releases) and set the Resizable BAR size. **If Resizable BAR works for you reply to [List of working motherboards](https://github.com/xCuri0/ReBarUEFI/issues/11) so I can add it to the list.**
 
 ### X99 Tutorial by Miyconst
 [![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjEE "Resizable BAR on LGA 2011-3 X99")
