@@ -28,6 +28,7 @@ Most UEFI firmwares have problems handling BARs larger than 2GB so several patch
 * <16GB BAR size limit removal
 * Prevent 64-bit BARs from being downgraded to 32-bit
 * Increase MMIO space from 16GB to full usage of 64GB range (Ivy Bridge) (may require DSDT modification so commented by default). See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) for more information.
+* Remove NVRAM whitelist to solve ReBarState ```GetLastError: 5``` (Socket 2011-v3 MB: C612, X99)
 
 #### ASUS no boot after patching
 Using UEFIPatch can cause issues with the 16 byte aligned modules in ASUS firmwares (see UEFITool [bug #231](https://github.com/LongSoft/UEFITool/issues/231)). 
