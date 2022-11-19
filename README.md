@@ -3,7 +3,6 @@ DXE driver to enable Resizable BAR on systems which don't support it officially.
 
 ![screenshot showing cpu-z, gpu-z and amd software](rebar.png)
 ### Requirements
-* PCIe 3.0 (Ivy Bridge+)
 * 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it.
 * (optional) BIOS support for Large BARs (often limited to 2GB)
 
@@ -47,6 +46,9 @@ On my system with an i5 3470 and Sapphire Nitro+ RX 580 8GB with Nimez drivers/r
 
 #### I set an unsupported BAR size and my system won't boot
 CMOS reset should fix it but in some motherboards it doesn't which means you will have to either boot with iGPU only or use BIOS flashback/recovery.
+
+#### Does it work on PCIe Gen2 systems ?
+Previously it was thought that it won't work on PCIe 2.0 systems but one user had it work with an i5 2500k.
 
 #### Will it work on x system ?
 As long as you have 4G decode try it and see. If you don't have 4G decode visible you can check the hidden BIOS settings with [Universal IFR Extractor](https://github.com/LongSoft/Universal-IFR-Extractor/releases) and set it using [grub-mod-setup_var](https://github.com/datasone/grub-mod-setup_var).
