@@ -20,14 +20,14 @@ Once running the modified firmware with **4G decoding enabled and CSM off** run 
 Instructions for applying UEFIPatch not included as it isn't required for these X99 motherboards. You can follow them below.
 
 ### UEFI Patching
-Most UEFI firmwares have problems handling BARs larger than 2GB so several patches were created to fix these issues. You can use [UEFIPatch](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to apply these patches located in the UEFIPatch folder. Some patches which may cause issues are commented and need to be manually uncommented.
+Most UEFI firmwares have problems handling 64-bit BARs so several patches were created to fix these issues. You can use [UEFIPatch](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to apply these patches located in the UEFIPatch folder. Some patches which may cause issues are commented and need to be manually uncommented.
 
 #### Working patches
 * <4GB BAR size limit removal
 * <16GB BAR size limit removal
 * Prevent 64-bit BARs from being downgraded to 32-bit
-* Increase MMIO space from 16GB to full usage of 64GB range (Ivy Bridge) (may require DSDT modification so commented by default). See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) for more information.
-* Remove NVRAM whitelist to solve ReBarState ```GetLastError: 5``` (Socket 2011-v3 MB: C612, X99)
+* Increase MMIO space from 16GB to full usage of 64GB range (may require DSDT modification so commented by default). See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) for more information.
+* Remove NVRAM whitelist to solve ReBarState ```GetLastError: 5```
 
 #### ASUS no boot after patching
 Using UEFIPatch can cause issues with the 16 byte aligned modules in ASUS firmwares (see UEFITool [bug #231](https://github.com/LongSoft/UEFITool/issues/231)). 
