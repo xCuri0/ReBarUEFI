@@ -186,19 +186,6 @@ INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
     return -1;
 }
 
-UINT8 pciRebarGetCurrentSize(UINTN pciAddress, UINTN epos, UINT8 bar)
-{
-    INTN pos;
-    UINT32 ctrl;
-
-    pos = pciRebarFindPos(pciAddress, (INTN)epos, bar);
-    if (pos < 0)
-        return 0;
-
-    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
-    return (ctrl & PCI_REBAR_CTRL_BAR_SIZE) >> PCI_REBAR_CTRL_BAR_SHIFT;
-}
-
 UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINT8 bar)
 {
     INTN pos;
@@ -258,14 +245,13 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
     {
         for (UINT8 bar = 0; bar < 6; bar++)
         {
-            UINT8 rBarC = pciRebarGetCurrentSize(pciAddress, epos, bar);
             UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
             if (!rBarS)
                 continue;
             // start with size from fls
             for (UINT8 n = MIN((UINT8)fls(rBarS) - 1, reBarState); n > 0; n--) {
-                // check if the size is different from current and supported
-                if (n != rBarC && (rBarS & (1 << n))) {
+                // check if size is supported
+                if (rBarS & (1 << n)) {
                     pciRebarSetSize(pciAddress, epos, bar, n);
                     break;
                 }
