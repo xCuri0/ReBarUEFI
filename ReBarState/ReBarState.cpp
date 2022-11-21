@@ -150,7 +150,10 @@ int main()
 		if (reBarState == 0)
 			std::cout << "Current ReBarState " << +reBarState << " / Disabled\n";
 		else
-			std::cout << "Current ReBarState " << +reBarState << " / " << std::pow(2, reBarState) << " MB \n";
+			if (reBarState == 32)
+				std::cout << "Current ReBarState " << +reBarState << " / Unlimited\n";
+			else
+				std::cout << "Current ReBarState " << +reBarState << " / " << std::pow(2, reBarState) << " MB\n";
 	}
 	else {
 		std::cout << "ReBarState variable doesn't exist / Disabled. Enter a value to create it\n";
@@ -170,11 +173,11 @@ int main()
 
 	if (reBarState < 20)
 		if (reBarState == 0)
-			std::cout << "Writing value of 0 / Disabled to ReBarState \n\n";
+			std::cout << "Writing value of 0 / Disabled to ReBarState\n\n";
 		else
-			std::cout << "Writing value of " << +reBarState << " / " << std::pow(2, reBarState) << " MB to ReBarState \n\n";
+			std::cout << "Writing value of " << +reBarState << " / " << std::pow(2, reBarState) << " MB to ReBarState\n\n";
 	else
-		std::cout << "Writing value to ReBarState \n\n";
+		std::cout << "Writing value to ReBarState\n\n";
 
 	if (WriteState(reBarState)) {
 		std::cout << "Successfully wrote ReBarState UEFI variable\n";
