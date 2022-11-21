@@ -9,8 +9,11 @@
 #include "include/pciRegs.h"
 #include "include/PciHostBridgeResourceAllocation.h"
 
-#define CAP_POINTER 0x34
-#define PCIE_DEVICE 0x10
+#ifdef _MSC_VER
+#pragma warning(disable:28251)
+#include <intrin.h>
+#pragma warning(default:28251)
+#endif
 
 #define PCI_POSSIBLE_ERROR(val) ((val) == 0xffffffff)
 
@@ -29,37 +32,18 @@ static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER o_PreprocessController;
 
-INTN fls(UINTN x)
+INTN fls(UINT32 x)
 {
-    INTN r = 32;
+    UINT32 r;
 
-    if (!x)
-        return 0;
-    if (!(x & 0xffff0000u))
-    {
-        x <<= 16;
-        r -= 16;
-    }
-    if (!(x & 0xff000000u))
-    {
-        x <<= 8;
-        r -= 8;
-    }
-    if (!(x & 0xf0000000u))
-    {
-        x <<= 4;
-        r -= 4;
-    }
-    if (!(x & 0xc0000000u))
-    {
-        x <<= 2;
-        r -= 2;
-    }
-    if (!(x & 0x80000000u))
-    {
-        x <<= 1;
-        r -= 1;
-    }
+    #ifdef _MSC_VER
+    _BitScanReverse64(&r, x);
+    #else
+    asm("bsrl %1,%0"
+	    : "=r" (r)
+	    : "rm" (x), "0" (-1));
+    #endif
+
     return r;
 }
 
@@ -103,30 +87,6 @@ EFI_STATUS pciWriteConfigByte(UINTN pciAddress, INTN pos, UINT8 *buf)
     return pciRootBridgeIo->Pci.Write(pciRootBridgeIo, EfiPciWidthUint8, pciAddrOffset(pciAddress, pos), 1, buf);
 }
 
-BOOLEAN isPCIeDevice(UINTN pciAddress)
-{
-    UINT8 buf = 0xff;
-    UINT16 offset = CAP_POINTER;
-    INTN tempPciAddress;
-
-    pciReadConfigByte(pciAddress, offset, &buf);
-    offset = buf;
-    while (buf)
-    {
-        tempPciAddress = offset;
-        pciReadConfigByte(pciAddress, tempPciAddress, &buf);
-        if (buf != PCIE_DEVICE)
-        {
-            tempPciAddress += 1;
-            pciReadConfigByte(pciAddress, tempPciAddress, &buf);
-            offset = buf;
-        }
-        else
-            return TRUE;
-    }
-    return FALSE;
-}
-
 // adapted from linux pci_find_ext_capability
 UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
 {
@@ -136,10 +96,6 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
 
     /* minimum 8 bytes per capability */
     ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
-
-    /* Only PCIe devices support extended configuration space */
-    if (!isPCIeDevice(pciAddress))
-        return 0;
 
     if (EFI_ERROR(pciReadConfigDword(pciAddress, pos, &header)))
         return 0;
@@ -249,7 +205,7 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
             if (!rBarS)
                 continue;
             // start with size from fls
-            for (UINT8 n = MIN((UINT8)fls(rBarS) - 1, reBarState); n > 0; n--) {
+            for (UINT8 n = MIN((UINT8)fls(rBarS), reBarState); n > 0; n--) {
                 // check if size is supported
                 if (rBarS & (1 << n)) {
                     pciRebarSetSize(pciAddress, epos, bar, n);
