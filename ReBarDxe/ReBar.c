@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2022 xCuri0 <zkqri0@gmail.com>
+SPDX-License-Identifier: MIT
+*/
 #include <Uefi.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -32,6 +36,7 @@ static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
 static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER o_PreprocessController;
 
+// find last set bit and return the index of it
 INTN fls(UINT32 x)
 {
     UINT32 r;
@@ -39,6 +44,7 @@ INTN fls(UINT32 x)
     #ifdef _MSC_VER
     _BitScanReverse64(&r, x);
     #else
+    // taken from linux x86 bitops.h
     asm("bsrl %1,%0"
 	    : "=r" (r)
 	    : "rm" (x), "0" (-1));

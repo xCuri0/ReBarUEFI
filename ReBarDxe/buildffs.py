@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Copyright (c) 2022 xCuri0 <zkqri0@gmail.com>
+# SPDX-License-Identifier: MIT
+#
 import os
 import sys
 import glob

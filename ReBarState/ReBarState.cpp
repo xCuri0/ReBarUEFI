@@ -1,4 +1,8 @@
-﻿#include <iostream>
+﻿/*
+Copyright (c) 2022 xCuri0 <zkqri0@gmail.com>
+SPDX-License-Identifier: MIT
+*/
+#include <iostream>
 #include <string>
 #include <cmath>
 
