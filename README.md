@@ -2,6 +2,10 @@
 DXE driver to enable Resizable BAR on systems which don't support it officially. This is done by hooking ```PreprocessController``` which is called for every PCI device during boot and setting up the Resizable BAR control registers.
 
 ![screenshot showing cpu-z, gpu-z and amd software](rebar.png)
+
+[![ReBarDxe EDK2](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarDxe.yml/badge.svg)](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarDxe.yml)
+[![ReBarState CMake](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml/badge.svg)](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml)
+
 ### Requirements
 * 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it.
 * (optional) BIOS support for Large BARs (often limited to 2GB)
