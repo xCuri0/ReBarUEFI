@@ -18,6 +18,24 @@ jobs:
     - uses: actions/setup-python@v4.3.0
     - run: pip install pefile
 
+    # save nasm
+    - name: cache nasm
+      id: cache-nasm
+      uses: actions/cache@v3
+      with:
+        path: C:\nasm
+        key: nasm-path
+
+    # edk2's setup script checks for nasm only at 'C:\nasm' so install it there
+    - name: install nasm
+      if: steps.cache-nasm.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        md C:\nasm
+        Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-win64.zip" -OutFile "C:\nasm\nasm.zip"
+        cd C:\nasm
+        7z e nasm.zip
+      
     - name: Download edk2
       uses: actions/checkout@v3
       with:
