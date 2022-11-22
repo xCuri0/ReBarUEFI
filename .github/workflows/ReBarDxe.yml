@@ -28,7 +28,7 @@ jobs:
     - name: Download RebarUEFI
       uses: actions/checkout@v3
       with:
-        path: '.\RebarUEFI\'
+        path: '.\ReBarUEFI\'
 
     - name: Setup EDK2
       run: .\edksetup.bat Rebuild
