@@ -81,7 +81,7 @@ jobs:
         path: './ReBarUEFI/'
 
     - name: Setup EDK2
-      run: ./edksetup.sh Rebuild
+      run: bash -c source ./edksetup.sh Rebuild
       
     - name: Build RebarDxe
       run: ./ReBarUEFI/.github/workflows/buildffs.sh
