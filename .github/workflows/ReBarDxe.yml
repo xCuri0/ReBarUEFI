@@ -89,6 +89,9 @@ jobs:
     - name: Install dependencies
       run: sudo apt install build-essential uuid-dev iasl git nasm  python-is-python3
 
+    - name: Build Base Tools
+      run: make -c ./BaseTools/
+
     - name: Setup EDK2
       run: bash -c "source edksetup.sh"
       
