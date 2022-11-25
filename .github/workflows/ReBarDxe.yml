@@ -74,6 +74,7 @@ jobs:
         repository: 'tianocore/edk2'
         ref: 'edk2-stable202208'
         submodules: 'recursive'
+        path: '.'
         
     - name: Download RebarUEFI
       uses: actions/checkout@v3
