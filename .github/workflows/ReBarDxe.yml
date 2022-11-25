@@ -8,11 +8,13 @@ on:
 env:
   TARGET: RELEASE
   TARGET_ARCH: X64
-  TOOL_CHAIN_TAG: VS2019
 
 jobs:
   rebardxe-windows:
     runs-on: windows-2019
+
+    env:
+      TOOL_CHAIN_TAG: VS2019
 
     steps:
     - uses: actions/setup-python@v4.3.0
@@ -59,3 +61,45 @@ jobs:
       with:
         name: ReBarDxe
         path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2019/X64/ReBarDxe.ffs
+  
+  
+  rebardxe-linux:
+    runs-on: ubuntu-22.04
+
+    env:
+      TOOL_CHAIN_TAG: GCC5
+
+    steps:
+    - uses: actions/setup-python@v4.3.0
+    - run: pip install pefile
+
+    - name: Download edk2
+      uses: actions/checkout@v3
+      with:
+        repository: 'tianocore/edk2'
+        ref: 'edk2-stable202208'
+        submodules: 'recursive'
+        path: '.'
+        
+    - name: Download RebarUEFI
+      uses: actions/checkout@v3
+      with:
+        path: './ReBarUEFI/'
+
+    - name: Install dependencies
+      run: sudo apt install build-essential uuid-dev iasl git nasm  python-is-python3
+
+    - name: Build Base Tools
+      run: make -C ./BaseTools/
+
+    - name: Setup EDK2
+      run: bash -c "source edksetup.sh"
+      
+    - name: Build RebarDxe
+      run: ./ReBarUEFI/.github/workflows/buildffs.sh
+
+    - name: Upload ReBarDxe artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: ReBarDxe
+        path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_GCC5/X64/ReBarDxe.ffs
