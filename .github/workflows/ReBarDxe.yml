@@ -20,6 +20,9 @@ jobs:
     - uses: actions/setup-python@v4.3.0
     - run: pip install pefile
 
+    - name: Support long filenames
+      run: git config --system core.longpaths true
+      
     # save nasm
     - name: cache nasm
       id: cache-nasm
