@@ -185,6 +185,7 @@ int main()
 
 	if (WriteState(reBarState)) {
 		std::cout << "Successfully wrote ReBarState UEFI variable\n";
+		std::cout << "\nReboot for changes to take effect\n";
 	}
 	else {
 		std::cout << "Failed to write ReBarState UEFI variable\n";
