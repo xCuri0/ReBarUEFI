@@ -62,7 +62,7 @@ jobs:
     - name: Upload ReBarDxe artifact
       uses: actions/upload-artifact@master
       with:
-        name: ReBarDxe
+        name: ReBarDxe (built on Windows)
         path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2019/X64/ReBarDxe.ffs
   
   
@@ -104,5 +104,5 @@ jobs:
     - name: Upload ReBarDxe artifact
       uses: actions/upload-artifact@master
       with:
-        name: ReBarDxe
+        name: ReBarDxe (built on Linux)
         path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_GCC5/X64/ReBarDxe.ffs
