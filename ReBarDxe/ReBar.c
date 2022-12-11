@@ -21,9 +21,6 @@ SPDX-License-Identifier: MIT
 
 #define PCI_POSSIBLE_ERROR(val) ((val) == 0xffffffff)
 
-// for quirk
-#define PCI_VENDOR_ID_ATI 0x1002
-
 // a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
 static GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
 
@@ -148,7 +145,7 @@ INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
     return -1;
 }
 
-UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINT8 bar)
+UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT8 bar)
 {
     INTN pos;
     UINT32 cap;
@@ -159,11 +156,6 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
 
     pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap);
     cap &= PCI_REBAR_CAP_SIZES;
-
-    /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
-    if (vid == PCI_VENDOR_ID_ATI && did == 0x731f &&
-        bar == 0 && cap == 0x7000)
-        cap = 0x3f000;
 
     return cap >> 4;
 }
@@ -188,28 +180,19 @@ INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
 VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
 {
     UINTN epos;
-    UINT16 vid, did;
     UINTN pciAddress;
 
     gBS->HandleProtocol(handle, &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
 
     pciAddress = EFI_PCI_ADDRESS(addrInfo.Bus, addrInfo.Device, addrInfo.Function, 0);
-    pciReadConfigWord(pciAddress, 0, &vid);
-    pciReadConfigWord(pciAddress, 2, &did);
-
-    if (vid == 0xFFFF)
-        return;
-
-    DEBUG((DEBUG_INFO, "ReBarDXE: Device vid:%x did:%x\n", vid, did));
 
     epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
     if (epos)
     {
         for (UINT8 bar = 0; bar < 6; bar++)
         {
-            UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
-            if (!rBarS)
-                continue;
+            UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, bar);
+
             // start with size from fls
             for (UINT8 n = MIN((UINT8)fls(rBarS), reBarState); n > 0; n--) {
                 // check if size is supported
