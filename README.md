@@ -38,11 +38,11 @@ Most UEFI firmwares have problems handling 64-bit BARs so several patches were c
 * <64GB BAR size limit removal
 * Prevent 64-bit BARs from being downgraded to 32-bit
 * Increase MMIO space to 64GB (Haswell/Broadwell). Full 512GB/39-bit isn't possible yet.
-* Increase MMIO space from 16GB to full usage of 64GB/36-bit range (Sandy/Ivy Bridge). **Requires DSDT modification on certain motherboards (mostly Gigabyte) so commented (#) by default. See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) for more information.**
+* Increase MMIO space from 16GB to full usage of 64GB/36-bit range (Sandy/Ivy Bridge). **Requires DSDT modification on certain motherboards. See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) for more information.**
 * Remove NVRAM whitelist to solve ReBarState ```GetLastError: 5```
 
 ### Build
-Use the provided buildffs.py script after cloning inside an edk2 tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake. See wiki page [Building](https://github.com/xCuri0/ReBarUEFI/wiki/Building) for more information.
+Use the provided **buildffs.py** script after cloning inside an [edk2](https://github.com/tianocore/edk2) tree to build the DXE driver. ReBarState can be built on Windows or Linux using CMake. See wiki page [Building](https://github.com/xCuri0/ReBarUEFI/wiki/Building) for more information.
 
 ### FAQ
 #### Why don't BAR sizes above x size work ?
