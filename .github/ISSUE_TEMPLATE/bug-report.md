@@ -11,6 +11,11 @@ assignees: ''
  - Motherboard: 
  - BIOS Version:
  - GPU: 
-
+ - [ ] CSM is turned off
+ - [ ] 4G decoding is enabled
+ - [ ] UEFIPatch is applied (see README for more information)
+ 
 **Description**
-Describe the issue here. **Do not ask if it will work on a certain device try and see it yourself.** **Make sure CSM is off and 4G decoding is on**
+
+Describe the issue here. 
+
