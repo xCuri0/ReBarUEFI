@@ -7,7 +7,7 @@ DXE driver to enable Resizable BAR on systems which don't support it officially.
 [![ReBarState CMake](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml/badge.svg)](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml)
 
 ### Requirements
-* 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it.
+* (optional) 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it. **Without 4G Decoding you will be limited to 1GB and in some cases 512MB BAR**
 * (optional) BIOS support for Large BARs
 
 ### Usage
@@ -22,7 +22,7 @@ Run ReBarState (found in Releases) and set the Resizable BAR size. **If Resizabl
 
 If you have any issues after enabling Resizable BAR see [Common Issues (and fixes)](https://github.com/xCuri0/ReBarUEFI/wiki/Common-issues-(and-fixes))
 
-**Some firmware don't clear NVRAM variables (ReBarState) when the CMOS is cleared. This can be a problem as CMOS clear will reset BIOS settings (4G/CSM) while keeping ReBarState enabled requiring you to boot with iGPU/non-rebar GPU to disable ReBarState. To mitigate this issue you can use AMIBCP to enable 4G decode and disable CSM by default. If it can be figured out how to detect boot failures then this issue can be solved**
+**Some firmware don't clear NVRAM variables (ReBarState) when the CMOS is cleared. This can be a problem as CMOS clear will reset BIOS settings (4G/CSM) while keeping ReBarState enabled requiring you to boot with iGPU/non-rebar GPU to disable ReBarState. To mitigate this issue see wiki page [Enabling 4G Decode and CSM Off by default](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-4G-Decode-and-CSM-Off-by-default). If it can be figured out how to detect boot failures then this won't be required**
 
 ### X99 Tutorial by Miyconst
 [![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjEE "Resizable BAR on LGA 2011-3 X99")
