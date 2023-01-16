@@ -7,8 +7,8 @@ DXE driver to enable Resizable BAR on systems which don't support it officially.
 [![ReBarState CMake](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml/badge.svg)](https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml)
 
 ### Requirements
-* (optional) 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it. **Without 4G Decoding you will be limited to 1GB and in some cases 512MB BAR**
-* (optional) BIOS support for Large BARs
+* (optional) 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it. **Without 4G Decoding you will be limited to 1GB and in some cases 512MB BAR you can try to increase this upto 2GB by reducing TOLUD**
+* (optional) BIOS support for Large BARs. Patches exist to fix most issues relating to this
 
 ### Usage
 Use [UEFITool (non NE)](https://github.com/LongSoft/UEFITool/releases/tag/0.28.0) to insert the FFS from [Releases](https://github.com/xCuri0/ReBarUEFI/releases) into the end of the DXE driver section and flash the modified firmware.
@@ -24,7 +24,7 @@ If you have any issues after enabling Resizable BAR see [Common Issues (and fixe
 
 **Some firmware don't clear NVRAM variables (ReBarState) when the CMOS is cleared. This can be a problem as CMOS clear will reset BIOS settings (4G/CSM) while keeping ReBarState enabled requiring you to boot with iGPU/non-rebar GPU to disable ReBarState. To mitigate this issue see wiki page [Enabling 4G Decode and CSM Off by default](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-4G-Decode-and-CSM-Off-by-default). If it can be figured out how to detect boot failures then this won't be required**
 
-### X99 Tutorial by Miyconst
+### AliExpress X99 Tutorial by Miyconst
 [![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjEE "Resizable BAR on LGA 2011-3 X99")
 
 Instructions for applying UEFIPatch not included as it isn't required for these X99 motherboards. You can follow them below.
