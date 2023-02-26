@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2022 xCuri0 <zkqri0@gmail.com>
+Copyright (c) 2022-2023 xCuri0 <zkqri0@gmail.com>
 SPDX-License-Identifier: MIT
 */
 #include <Uefi.h>
@@ -23,6 +23,9 @@ SPDX-License-Identifier: MIT
 
 // for quirk
 #define PCI_VENDOR_ID_ATI 0x1002
+
+// if system time is before this year then CMOS reset will be detected and rebar will be disabled.
+#define BUILD_YEAR 2023
 
 // a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
 static GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
@@ -286,6 +289,7 @@ EFI_STATUS EFIAPI rebarInit(
     UINTN bufferSize = 1;
     EFI_STATUS status;
     UINT32 attributes;
+    EFI_TIME time;
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Loaded\n"));
 
@@ -301,6 +305,21 @@ EFI_STATUS EFIAPI rebarInit(
     if (reBarState)
     {
         DEBUG((DEBUG_INFO, "ReBarDXE: Enabled, maximum BAR size 2^%u MB\n", reBarState));
+
+        // Detect CMOS reset by checking if year before BUILD_YEAR
+        status = gRT->GetTime (&time, NULL);
+        if (time.Year < BUILD_YEAR) {
+            reBarState = 0;
+            bufferSize = 1;
+            attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
+
+            status = gRT->SetVariable(L"ReBarState", &reBarStateGuid,
+                attributes,
+                bufferSize, &reBarState);
+
+            return EFI_SUCCESS;
+        }
+
         // For overriding PciHostBridgeResourceAllocationProtocol
         pciHostBridgeResourceAllocationProtocolHook();
     }

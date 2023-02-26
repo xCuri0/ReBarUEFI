@@ -22,7 +22,7 @@ Run ReBarState (found in Releases) and set the Resizable BAR size. **If Resizabl
 
 If you have any issues after enabling Resizable BAR see [Common Issues (and fixes)](https://github.com/xCuri0/ReBarUEFI/wiki/Common-issues-(and-fixes))
 
-**Some firmware don't clear NVRAM variables (ReBarState) when the CMOS is cleared. This can be a problem as CMOS clear will reset BIOS settings (4G/CSM) while keeping ReBarState enabled requiring you to boot with iGPU/non-rebar GPU to disable ReBarState. To mitigate this issue see wiki page [Enabling 4G Decode and CSM Off by default](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-4G-Decode-and-CSM-Off-by-default). If it can be figured out how to detect boot failures then this won't be required**
+You won't have any issues with clearing CMOS like on earlier builds, there is now CMOS reset detection by checking system date.
 
 ### AliExpress X99 Tutorial by Miyconst
 [![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjEE "Resizable BAR on LGA 2011-3 X99")
