@@ -22,7 +22,7 @@ jobs:
 
     - name: Support long filenames
       run: git config --system core.longpaths true
-      
+
     # save nasm
     - name: cache nasm
       id: cache-nasm
@@ -40,14 +40,14 @@ jobs:
         Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/win64/nasm-2.15.05-win64.zip" -OutFile "C:\nasm\nasm.zip"
         cd C:\nasm
         7z e nasm.zip
-      
+
     - name: Download edk2
       uses: actions/checkout@v3
       with:
         repository: 'tianocore/edk2'
         ref: 'edk2-stable202208'
         submodules: 'recursive'
-        
+
     - name: Download RebarUEFI
       uses: actions/checkout@v3
       with:
@@ -55,7 +55,7 @@ jobs:
 
     - name: Setup EDK2
       run: .\edksetup.bat Rebuild
-      
+
     - name: Build RebarDxe
       run: .\ReBarUEFI\.github\workflows\buildffs.bat
 
@@ -64,8 +64,8 @@ jobs:
       with:
         name: ReBarDxe (built on Windows)
         path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2019/X64/ReBarDxe.ffs
-  
-  
+
+
   rebardxe-linux:
     runs-on: ubuntu-22.04
 
@@ -83,7 +83,7 @@ jobs:
         ref: 'edk2-stable202208'
         submodules: 'recursive'
         path: '.'
-        
+
     - name: Download RebarUEFI
       uses: actions/checkout@v3
       with:
@@ -97,7 +97,7 @@ jobs:
 
     - name: Setup EDK2
       run: bash -c "source edksetup.sh"
-      
+
     - name: Build RebarDxe
       run: ./ReBarUEFI/.github/workflows/buildffs.sh
 
