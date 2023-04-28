@@ -2,7 +2,7 @@
 <p align="center">
 <a href="https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarDxe.yml"><img src="https://img.shields.io/github/actions/workflow/status/xCuri0/ReBarUEFI/ReBarDxe.yml?logo=github&label=ReBarDxe&style=flat-square" alt="GitHub Actions ReBarDxe"></a>
 <a href="https://github.com/xCuri0/ReBarUEFI/actions/workflows/ReBarState.yml"><img src="https://img.shields.io/github/actions/workflow/status/xCuri0/ReBarUEFI/ReBarState.yml?logo=github&label=ReBarState&style=flat-square" alt="GitHub Actions ReBarState"></a>
-<a href="https://github.com/xCuri0/ReBarUEFI/releases/tag/0.3"><img src="https://img.shields.io/github/downloads/xCuri0/ReBarUEFI/total.svg?logo=github&logoColor=white&style=flat-square&color=E75776" alt="Downloads"></a>
+<a href="https://github.com/xCuri0/ReBarUEFI/releases/"><img src="https://img.shields.io/github/downloads/xCuri0/ReBarUEFI/total.svg?logo=github&logoColor=white&style=flat-square&color=E75776" alt="Downloads"></a>
 </p>
 <p align="center">
 A UEFI DXE driver to enable Resizable BAR on systems which don't support it officially. This provides performance benefits and is even <a href="https://www.intel.com/content/www/us/en/support/articles/000092416/graphics.html">required</a> for Intel Arc GPUs to function optimally.
@@ -20,7 +20,7 @@ Follow the wiki guide [Adding FFS module](https://github.com/xCuri0/ReBarUEFI/wi
 
 Once running the modified firmware make sure that **4G decoding is enabled and CSM is off**.
 
-Next run **ReBarState** which can be found in [Releases](https://github.com/xCuri0/ReBarUEFI/releases) and set the Resizable BAR size. In most cases you should be able to use ```32``` (unlimited) without issues but you might need to use a smaller BAR size if ```32``` doesn't work
+Next run **ReBarState** which can be found in [Releases](https://github.com/xCuri0/ReBarUEFI/releases) (if you're on Linux build with CMake) and set the Resizable BAR size. In most cases you should be able to use ```32``` (unlimited) without issues but you might need to use a smaller BAR size if ```32``` doesn't work
 
  **If Resizable BAR works for you reply to [List of working motherboards](https://github.com/xCuri0/ReBarUEFI/issues/11) so I can add it to the list.** Most firmware will accept unsigned/patched modules with Secure Boot on so you won't have any problems running certain games.
 
