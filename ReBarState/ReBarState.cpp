@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2022 xCuri0 <zkqri0@gmail.com>
+Copyright (c) 2022-2023 xCuri0 <zkqri0@gmail.com>
 SPDX-License-Identifier: MIT
 */
 #include <iostream>
@@ -141,7 +141,7 @@ int main()
 	std::string i;
 	uint8_t reBarState;
 
-	std::cout << "ReBarState (c) 2022 xCuri0\n\n";
+	std::cout << "ReBarState (c) 2023 xCuri0\n\n";
 	if (!CheckPriviledge()) {
 		std::cout << "Failed to obtain EFI variable access try running as admin/root\n";
 		ret = 1;
