@@ -128,7 +128,7 @@ bool WriteState(uint8_t rBarState) {
 	f = fopen(REBARPS, "wb");
 
 	rVar.attr = VARIABLE_ATTRIBUTE_NON_VOLATILE | VARIABLE_ATTRIBUTE_BOOTSERVICE_ACCESS | VARIABLE_ATTRIBUTE_RUNTIME_ACCESS;
-	rVar.value = rBarState;	
+	rVar.value = rBarState;
 
 	return fwrite(&rVar, sizeof(rVar), 1, f) == 1;;
 }
@@ -138,7 +138,7 @@ bool WriteState(uint8_t rBarState) {
 int main()
 {
 	int ret = 0;
-	std::string i;	
+	std::string i;
 	uint8_t reBarState;
 
 	std::cout << "ReBarState (c) 2022 xCuri0\n\n";
@@ -163,7 +163,7 @@ int main()
 		std::cout << "ReBarState variable doesn't exist / Disabled. Enter a value to create it\n";
 	}
 
-	std::cout << "\nVerify that 4G Decoding is enabled otherwise system will not POST with GPU. If your ReBarState value keeps getting reset then check your system time.\n";
+	std::cout << "\nVerify that 4G Decoding is enabled and CSM is disabled otherwise system will not POST with GPU. If your ReBarState value keeps getting reset then check your system time.\n";
 	std::cout << "\nIt is recommended to first try smaller sizes above 256MB in case BIOS doesn't support large BARs.\n";
 	std::cout << "\nEnter ReBarState Value\n      0: Disabled \nAbove 0: Maximum BAR size set to 2^x MB \n     32: Unlimited BAR size\n\n";
 
