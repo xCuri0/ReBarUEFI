@@ -5,6 +5,7 @@ SPDX-License-Identifier: MIT
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <cstdint>
 
 #ifdef _MSC_VER
 #include <Windows.h>
