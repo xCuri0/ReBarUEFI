@@ -1,4 +1,4 @@
-# PciBus | Add Intel 7 Series XHCI Controller to 64-bit blacklist (fix broken USB in UEFI)
-3C1DE39F-D207-408A-AACC-731CFB7F1DD7 10 P:DE10D301FFFF00000B:8680311EFFFF00000B
+# PciBus | Add Intel 7 Series XHCI Controller to 64-bit blacklist (fix broken USB in UEFI with 4G decoding)
+3C1DE39F-D207-408A-AACC-731CFB7F1DD7 10 P:DE10D301FFFF00000B00000014:8680311EFFFF00000B00000010
 
-# It works by replacing NVIDIA 7200 GS (10de:01d3) force 32-bit BAR with 7 series XHCI (8086:1e31)
+# It works by replacing NVIDIA 7200 GS (10de:01d3) BAR offset 0x14 force 32-bit BAR with 7 series XHCI (8086:1e31) BAR offset 0x10
