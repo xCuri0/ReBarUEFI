@@ -74,6 +74,8 @@ On my system with an i5 3470 and Sapphire Nitro+ RX 580 8GB with [Resizable BAR 
 
 * [Ghidra](https://ghidra-sre.org/) which was used to patch UEFI modules to workaround artificial limitations
 
+* [@vit9696](https://github.com/vit9696) for the NVRAM whitelist patches
+
 * [@NikolajSchlej](https://github.com/NikolajSchlej) for developing UEFITool/UEFIPatch
 
 * [QEMU](https://www.qemu.org/)/OVMF made testing hooking way easier although it didn't have any resizable BAR devices so the only way I could test it was on my actual PC.
