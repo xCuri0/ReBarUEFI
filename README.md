@@ -11,6 +11,8 @@ A UEFI DXE driver to enable Resizable BAR on systems which don't support it offi
 
 ![screenshot showing cpu-z, gpu-z and amd software](rebar.png)
 
+### If using an NVIDIA Turing GPU (20 or 16 series) see [NvStrapsReBar](https://github.com/terminatorul/NvStrapsReBar) for enabling Resizable BAR on it.
+
 ## Requirements
 * (optional) 4G Decoding enabled. See wiki page [Enabling hidden 4G decoding](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding) if you can't find an option for it. **Without 4G Decoding you will be limited to 1GB BAR and in some cases 512MB you can try to increase this upto 2GB by reducing TOLUD**
 * (optional) BIOS support for Large BARs. Patches exist to fix most issues relating to this
