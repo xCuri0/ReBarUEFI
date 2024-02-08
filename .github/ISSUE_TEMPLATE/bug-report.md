@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve RebarUEFI
+about: Create a report to help us improve RebarUEFI. USE DISCUSSION FOR ISSUES ABOUT BIOS FLASHING
 title: ''
 labels: ''
 assignees: ''
