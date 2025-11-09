@@ -46,7 +46,8 @@ Most UEFI firmwares have problems handling 64-bit BARs so several patches were c
 * <16GB BAR size limit removal
 * <64GB BAR size limit removal
 * Prevent 64-bit BARs from being downgraded to 32-bit
-* Increase MMIO space to 64GB (Haswell/Broadwell). Full 512GB/39-bit isn't possible yet.
+* Increase MMIO space from 16-32GB to full usage of 512GB/39-bit range (Skylake/Kaby Lake/Coffee Lake)
+* Increase MMIO space from 8-16GB to full usage of 512GB/39-bit range (Haswell/Broadwell). The issue of older patches being limited to 64GB has been fixed.
 * Increase MMIO space from 16GB to full usage of 64GB/36-bit range (Sandy/Ivy Bridge). **Requires DSDT modification on certain motherboards. See wiki page [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching#sandyivy-bridge-dsdt-patch) for more information.**
 * Remove NVRAM whitelist to solve ReBarState ```GetLastError: 5```
 * Fix USB 3 ports not working in BIOS with 4G Decoding enabled (Ivy Bridge/Haswell/Broadwell)
@@ -69,7 +70,7 @@ Clear CMOS and Resizable BAR should be disabled. In some cases it may be necessa
 On my system with an i5 3470 and Sapphire Nitro+ RX 580 8GB with [Resizable BAR enabled in driver](https://github.com/xCuri0/ReBarUEFI/wiki/Common-issues-(and-fixes)#how-do-i-enable-resizable-bar-on-unsupported-amd-gpus-) I get an upto 12% FPS increase with 2GB BAR size.
 
 ## Credit
-* [@dsanke](https://github.com/dsanke), [@cursemex](https://github.com/cursemex), [@val3nt33n](https://github.com/@val3nt33n), [@Mak3rde](https://github.com/Mak3rde) and [@romulus2k4](https://github.com/romulus2k4) for testing/helping develop patches
+* [@dsanke](https://github.com/dsanke), [@cursemex](https://github.com/cursemex), [@dripsnek](https://github.com/@dripsnek), [@val3nt33n](https://github.com/@val3nt33n), [@Mak3rde](https://github.com/Mak3rde) and [@romulus2k4](https://github.com/romulus2k4) for testing/helping develop patches
 
 * The Linux kernel especially the ```amdgpu``` driver
 
