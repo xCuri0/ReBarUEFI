@@ -11,10 +11,10 @@ env:
 
 jobs:
   rebardxe-windows:
-    runs-on: windows-2019
+    runs-on: windows-2025
 
     env:
-      TOOL_CHAIN_TAG: VS2019
+      TOOL_CHAIN_TAG: VS2022
 
     steps:
     - uses: actions/setup-python@v4.3.0
@@ -45,7 +45,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: 'tianocore/edk2'
-        ref: 'edk2-stable202208'
+        ref: 'edk2-stable202508'
         submodules: 'recursive'
 
     - name: Download RebarUEFI
@@ -63,14 +63,14 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: ReBarDxe (built on Windows)
-        path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2019/X64/ReBarDxe.ffs
+        path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2022/X64/ReBarDxe.ffs
 
 
   rebardxe-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     env:
-      TOOL_CHAIN_TAG: GCC5
+      TOOL_CHAIN_TAG: GCC
 
     steps:
     - uses: actions/setup-python@v4.3.0
@@ -80,7 +80,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: 'tianocore/edk2'
-        ref: 'edk2-stable202208'
+        ref: 'edk2-stable202508'
         submodules: 'recursive'
         path: '.'
 
@@ -90,7 +90,7 @@ jobs:
         path: './ReBarUEFI/'
 
     - name: Install dependencies
-      run: sudo apt install build-essential uuid-dev iasl git nasm  python-is-python3
+      run: sudo apt install build-essential uuid-dev iasl git nasm python-is-python3
 
     - name: Build Base Tools
       run: make -C ./BaseTools/
@@ -105,4 +105,4 @@ jobs:
       uses: actions/upload-artifact@master
       with:
         name: ReBarDxe (built on Linux)
-        path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_GCC5/X64/ReBarDxe.ffs
+        path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_GCC/X64/ReBarDxe.ffs
