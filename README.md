@@ -61,7 +61,7 @@ Use the provided **buildffs.py** script after cloning inside an [edk2](https://g
 Previously it was thought that it won't work on PCIe Gen2 systems but one user had it work with an i5 2500k.
 
 ### Can I use Resizable BAR on my system without modifying BIOS ?
-You can use Linux with **4G Decoding on**, recent versions will automatically resize and allocate GPU BARs. For NVIDIA GPUs you need to use the ```NVreg_EnableResizableBar=1``` module parameter, amdgpu and xe drivers will automatically enable it if the GPU supports it.
+You can use Linux with **4G Decoding on**, recent versions will automatically resize and allocate GPU BARs. For NVIDIA GPUs using the proprietary ```nvidia``` driver, set the ```NVreg_EnableResizableBar=1``` module parameter (e.g. ```options nvidia NVreg_EnableResizableBar=1```); ```amdgpu``` and ```xe``` will automatically enable it if the GPU supports it.
 If your BIOS doesn't have the 4G decoding option (make sure to check [hidden](https://github.com/xCuri0/ReBarUEFI/wiki/Enabling-hidden-4G-decoding)) or DSDT is faulty you can then follow the [Arch wiki guide for DSDT modification](https://wiki.archlinux.org/title/DSDT#Recompiling_it_yourself) using modifications from [DSDT Patching](https://github.com/xCuri0/ReBarUEFI/wiki/DSDT-Patching) and boot with ```pci=realloc``` in your kernel command line. **Currently there is no known method to get it on Windows without BIOS modification**
 
 ### I set an unsupported BAR size and my system won't boot
