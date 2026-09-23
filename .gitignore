@@ -19,3 +19,4 @@ NvVars
 *.log
 out/
 build/
+__pycache__/

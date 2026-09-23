@@ -17,7 +17,9 @@ jobs:
       TOOL_CHAIN_TAG: VS2022
 
     steps:
-    - uses: actions/setup-python@v4.3.0
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
     - run: pip install pefile
 
     - name: Support long filenames
@@ -26,7 +28,7 @@ jobs:
     # save nasm
     - name: cache nasm
       id: cache-nasm
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: C:\nasm
         key: nasm-path
@@ -42,14 +44,14 @@ jobs:
         7z e nasm.zip
 
     - name: Download edk2
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: 'tianocore/edk2'
         ref: 'edk2-stable202508'
         submodules: 'recursive'
 
     - name: Download RebarUEFI
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: '.\ReBarUEFI\'
 
@@ -60,7 +62,7 @@ jobs:
       run: .\ReBarUEFI\.github\workflows\buildffs.bat
 
     - name: Upload ReBarDxe artifact
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v4
       with:
         name: ReBarDxe (built on Windows)
         path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_VS2022/X64/ReBarDxe.ffs
@@ -73,11 +75,13 @@ jobs:
       TOOL_CHAIN_TAG: GCC
 
     steps:
-    - uses: actions/setup-python@v4.3.0
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
     - run: pip install pefile
 
     - name: Download edk2
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: 'tianocore/edk2'
         ref: 'edk2-stable202508'
@@ -85,7 +89,7 @@ jobs:
         path: '.'
 
     - name: Download RebarUEFI
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: './ReBarUEFI/'
 
@@ -95,14 +99,11 @@ jobs:
     - name: Build Base Tools
       run: make -C ./BaseTools/
 
-    - name: Setup EDK2
-      run: bash -c "source edksetup.sh"
-
     - name: Build RebarDxe
       run: ./ReBarUEFI/.github/workflows/buildffs.sh
 
     - name: Upload ReBarDxe artifact
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v4
       with:
         name: ReBarDxe (built on Linux)
         path: ${{github.workspace}}/Build/ReBarUEFI/RELEASE_GCC/X64/ReBarDxe.ffs
