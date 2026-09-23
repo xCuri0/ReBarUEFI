@@ -3,6 +3,7 @@ Copyright (c) 2022-2023 xCuri0 <zkqri0@gmail.com>
 SPDX-License-Identifier: MIT
 */
 #include <Uefi.h>
+#include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -13,50 +14,38 @@ SPDX-License-Identifier: MIT
 #include "include/pciRegs.h"
 #include "include/PciHostBridgeResourceAllocation.h"
 
-#ifdef _MSC_VER
-#pragma warning(disable:28251)
-#include <intrin.h>
-#pragma warning(default:28251)
-#endif
-
 #define PCI_POSSIBLE_ERROR(val) ((val) == 0xffffffff)
 
 // for quirk
 #define PCI_VENDOR_ID_ATI 0x1002
 
-// if system time is before this year then CMOS reset will be detected and rebar will be disabled.
-#define BUILD_YEAR 2023
+// if system time is before the build year then CMOS reset will be detected and rebar will be disabled.
+// year is parsed from __DATE__ ("Mmm dd yyyy") so it can't go stale.
+#define BUILD_YEAR (((__DATE__[7] - '0') * 1000) + ((__DATE__[8] - '0') * 100) + \
+                    ((__DATE__[9] - '0') * 10) + (__DATE__[10] - '0'))
+
+// maximum number of PCI host bridges we can hook
+#define MAX_HOST_BRIDGES 8
 
 // a3c5b77a-c88f-4a93-bf1c-4a92a32c65ce
 static GUID reBarStateGuid = { 0xa3c5b77a, 0xc88f, 0x4a93, {0xbf, 0x1c, 0x4a, 0x92, 0xa3, 0x2c, 0x65, 0xce}};
 
 // 0: disabled
-// >0: maximum BAR size (2^x) set to value. UINT8_MAX for unlimited
+// >0: maximum BAR size set to 2^x MB. 32 (or higher) for unlimited
 static UINT8 reBarState = 0;
 
-static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 static EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *pciRootBridgeIo;
 
-static EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER o_PreprocessController;
+// hooked host bridge protocols and their original PreprocessController functions
+typedef struct {
+    EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL                       *protocol;
+    EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL_PREPROCESS_CONTROLLER original;
+} HOST_BRIDGE_HOOK;
 
-// find last set bit and return the index of it
-INTN fls(UINT32 x)
-{
-    UINT32 r;
+static HOST_BRIDGE_HOOK hostBridgeHooks[MAX_HOST_BRIDGES];
+static UINTN hostBridgeHookCount = 0;
 
-    #ifdef _MSC_VER
-    _BitScanReverse64(&r, x);
-    #else
-    // taken from linux x86 bitops.h
-    asm("bsrl %1,%0"
-	    : "=r" (r)
-	    : "rm" (x), "0" (-1));
-    #endif
-
-    return r;
-}
-
-UINT64 pciAddrOffset(UINTN pciAddress, INTN offset)
+static UINT64 pciAddrOffset(UINTN pciAddress, INTN offset)
 {
     UINTN reg = (pciAddress & 0xffffffff00000000) >> 32;
     UINTN bus = (pciAddress & 0xff000000) >> 24;
@@ -67,37 +56,23 @@ UINT64 pciAddrOffset(UINTN pciAddress, INTN offset)
 }
 
 // created these functions to make it easy to read as we are adapting alot of code from Linux
-EFI_STATUS pciReadConfigDword(UINTN pciAddress, INTN pos, UINT32 *buf)
+static EFI_STATUS pciReadConfigDword(UINTN pciAddress, INTN pos, UINT32 *buf)
 {
     return pciRootBridgeIo->Pci.Read(pciRootBridgeIo, EfiPciWidthUint32, pciAddrOffset(pciAddress, pos), 1, buf);
 }
 
-EFI_STATUS pciWriteConfigDword(UINTN pciAddress, INTN pos, UINT32 *buf)
+static EFI_STATUS pciWriteConfigDword(UINTN pciAddress, INTN pos, UINT32 *buf)
 {
     return pciRootBridgeIo->Pci.Write(pciRootBridgeIo, EfiPciWidthUint32, pciAddrOffset(pciAddress, pos), 1, buf);
 }
-EFI_STATUS pciReadConfigWord(UINTN pciAddress, INTN pos, UINT16 *buf)
+
+static EFI_STATUS pciReadConfigWord(UINTN pciAddress, INTN pos, UINT16 *buf)
 {
     return pciRootBridgeIo->Pci.Read(pciRootBridgeIo, EfiPciWidthUint16, pciAddrOffset(pciAddress, pos), 1, buf);
 }
 
-EFI_STATUS pciWriteConfigWord(UINTN pciAddress, INTN pos, UINT16 *buf)
-{
-    return pciRootBridgeIo->Pci.Write(pciRootBridgeIo, EfiPciWidthUint16, pciAddrOffset(pciAddress, pos), 1, buf);
-}
-
-EFI_STATUS pciReadConfigByte(UINTN pciAddress, INTN pos, UINT8 *buf)
-{
-    return pciRootBridgeIo->Pci.Read(pciRootBridgeIo, EfiPciWidthUint8, pciAddrOffset(pciAddress, pos), 1, buf);
-}
-
-EFI_STATUS pciWriteConfigByte(UINTN pciAddress, INTN pos, UINT8 *buf)
-{
-    return pciRootBridgeIo->Pci.Write(pciRootBridgeIo, EfiPciWidthUint8, pciAddrOffset(pciAddress, pos), 1, buf);
-}
-
 // adapted from linux pci_find_ext_capability
-UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
+static UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
 {
     INTN ttl;
     UINT32 header;
@@ -130,12 +105,14 @@ UINT16 pciFindExtCapability(UINTN pciAddress, INTN cap)
     return 0;
 }
 
-INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
+static INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
 {
     UINTN nbars, i;
     UINT32 ctrl;
 
-    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+    if (EFI_ERROR(pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl)))
+        return -1;
+
     nbars = (ctrl & PCI_REBAR_CTRL_NBAR_MASK) >>
             PCI_REBAR_CTRL_NBAR_SHIFT;
 
@@ -143,7 +120,9 @@ INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
     {
         UINTN bar_idx;
 
-        pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+        if (EFI_ERROR(pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl)))
+            return -1;
+
         bar_idx = ctrl & PCI_REBAR_CTRL_BAR_IDX;
         if (bar_idx == bar)
             return pos;
@@ -151,7 +130,7 @@ INTN pciRebarFindPos(UINTN pciAddress, INTN pos, UINT8 bar)
     return -1;
 }
 
-UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINT8 bar)
+static UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16 did, UINT8 bar)
 {
     INTN pos;
     UINT32 cap;
@@ -160,7 +139,9 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
     if (pos < 0)
         return 0;
 
-    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap);
+    if (EFI_ERROR(pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap)))
+        return 0;
+
     cap &= PCI_REBAR_CAP_SIZES;
 
     /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
@@ -171,7 +152,7 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
     return cap >> 4;
 }
 
-INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
+static INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
 {
     INTN pos;
     UINT32 ctrl;
@@ -180,25 +161,35 @@ INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
     if (pos < 0)
         return pos;
 
-    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+    if (EFI_ERROR(pciReadConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl)))
+        return -1;
+
     ctrl &= (UINT32)~PCI_REBAR_CTRL_BAR_SIZE;
     ctrl |= (UINT32)size << PCI_REBAR_CTRL_BAR_SHIFT;
 
-    pciWriteConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl);
+    if (EFI_ERROR(pciWriteConfigDword(pciAddress, pos + PCI_REBAR_CTRL, &ctrl)))
+        return -1;
+
     return 0;
 }
 
-VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
+static VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS addrInfo)
 {
     UINTN epos;
     UINT16 vid, did;
     UINTN pciAddress;
+    EFI_STATUS status;
 
-    gBS->HandleProtocol(handle, &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
+    status = gBS->HandleProtocol(handle, &gEfiPciRootBridgeIoProtocolGuid, (VOID **)&pciRootBridgeIo);
+    if (EFI_ERROR(status))
+        return;
 
     pciAddress = EFI_PCI_ADDRESS(addrInfo.Bus, addrInfo.Device, addrInfo.Function, 0);
-    pciReadConfigWord(pciAddress, 0, &vid);
-    pciReadConfigWord(pciAddress, 2, &did);
+
+    if (EFI_ERROR(pciReadConfigWord(pciAddress, 0, &vid)))
+        return;
+    if (EFI_ERROR(pciReadConfigWord(pciAddress, 2, &did)))
+        return;
 
     if (vid == 0xFFFF)
         return;
@@ -213,10 +204,10 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
             UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
             if (!rBarS)
                 continue;
-            // start with size from fls
-            for (UINT8 n = MIN((UINT8)fls(rBarS), reBarState); n > 0; n--) {
+            // start with the highest supported size
+            for (UINT8 n = MIN((UINT8)HighBitSet32(rBarS), reBarState); n > 0; n--) {
                 // check if size is supported
-                if (rBarS & (1 << n)) {
+                if (rBarS & (1U << n)) {
                     pciRebarSetSize(pciAddress, epos, bar, n);
                     break;
                 }
@@ -225,15 +216,22 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
     }
 }
 
-EFI_STATUS EFIAPI PreprocessControllerOverride (
+static EFI_STATUS EFIAPI PreprocessControllerOverride (
   IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
   IN  EFI_HANDLE                                        RootBridgeHandle,
   IN  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS       PciAddress,
   IN  EFI_PCI_CONTROLLER_RESOURCE_ALLOCATION_PHASE      Phase
   )
 {
-    // call the original method
-    EFI_STATUS status = o_PreprocessController(This, RootBridgeHandle, PciAddress, Phase);
+    EFI_STATUS status = EFI_SUCCESS;
+
+    // call the original method of the host bridge being preprocessed
+    for (UINTN i = 0; i < hostBridgeHookCount; i++) {
+        if (hostBridgeHooks[i].protocol == This) {
+            status = hostBridgeHooks[i].original(This, RootBridgeHandle, PciAddress, Phase);
+            break;
+        }
+    }
 
     DEBUG((DEBUG_INFO, "ReBarDXE: Hooked PreprocessController called %d\n", Phase));
 
@@ -245,11 +243,11 @@ EFI_STATUS EFIAPI PreprocessControllerOverride (
     return status;
 }
 
-VOID pciHostBridgeResourceAllocationProtocolHook()
+static VOID pciHostBridgeResourceAllocationProtocolHook(VOID)
 {
     EFI_STATUS status;
-    UINTN handleCount;
-    EFI_HANDLE *handleBuffer;
+    UINTN handleCount = 0;
+    EFI_HANDLE *handleBuffer = NULL;
 
     status = gBS->LocateHandleBuffer(
         ByProtocol,
@@ -261,25 +259,33 @@ VOID pciHostBridgeResourceAllocationProtocolHook()
     if (EFI_ERROR(status))
         goto free;
 
-    status = gBS->OpenProtocol(
-        handleBuffer[0],
-        &gEfiPciHostBridgeResourceAllocationProtocolGuid,
-        (VOID **)&pciResAlloc,
-        gImageHandle,
-        NULL,
-        EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+    for (UINTN i = 0; i < handleCount && hostBridgeHookCount < MAX_HOST_BRIDGES; i++)
+    {
+        EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *pciResAlloc;
 
-    if (EFI_ERROR(status))
-        goto free;
+        status = gBS->OpenProtocol(
+            handleBuffer[i],
+            &gEfiPciHostBridgeResourceAllocationProtocolGuid,
+            (VOID **)&pciResAlloc,
+            gImageHandle,
+            NULL,
+            EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 
-    DEBUG((DEBUG_INFO, "ReBarDXE: Hooking EfiPciHostBridgeResourceAllocationProtocol->PreprocessController\n"));
+        if (EFI_ERROR(status))
+            continue;
 
-    // Hook PreprocessController
-    o_PreprocessController = pciResAlloc->PreprocessController;
-    pciResAlloc->PreprocessController = &PreprocessControllerOverride;
+        DEBUG((DEBUG_INFO, "ReBarDXE: Hooking EfiPciHostBridgeResourceAllocationProtocol->PreprocessController\n"));
+
+        // Hook PreprocessController
+        hostBridgeHooks[hostBridgeHookCount].protocol = pciResAlloc;
+        hostBridgeHooks[hostBridgeHookCount].original = pciResAlloc->PreprocessController;
+        hostBridgeHookCount++;
+        pciResAlloc->PreprocessController = &PreprocessControllerOverride;
+    }
 
 free:
-    FreePool(handleBuffer);
+    if (handleBuffer != NULL)
+        FreePool(handleBuffer);
 }
 
 EFI_STATUS EFIAPI rebarInit(
@@ -308,12 +314,12 @@ EFI_STATUS EFIAPI rebarInit(
 
         // Detect CMOS reset by checking if year before BUILD_YEAR
         status = gRT->GetTime (&time, NULL);
-        if (time.Year < BUILD_YEAR) {
+        if (!EFI_ERROR(status) && time.Year < BUILD_YEAR) {
             reBarState = 0;
             bufferSize = 1;
             attributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
 
-            status = gRT->SetVariable(L"ReBarState", &reBarStateGuid,
+            gRT->SetVariable(L"ReBarState", &reBarStateGuid,
                 attributes,
                 bufferSize, &reBarState);
 

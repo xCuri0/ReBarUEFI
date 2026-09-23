@@ -5,8 +5,8 @@
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = rebarInit
- 
-[Sources]  
+
+[Sources]
   ReBar.c
 
 [Packages]
@@ -14,11 +14,14 @@
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
   UefiDriverEntryPoint
   UefiBootServicesTableLib
   UefiRuntimeServicesTableLib
   UefiLib
-   
+
 [Protocols]
   gEfiPciRootBridgeIoProtocolGuid ## SOMETIMES_CONSUMES
   gEfiPciHostBridgeResourceAllocationProtocolGuid ## SOMETIMES_CONSUMES
