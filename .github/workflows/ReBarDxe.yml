@@ -11,7 +11,9 @@ env:
 
 jobs:
   rebardxe-windows:
-    runs-on: windows-2025
+    # windows-2025 now ships Visual Studio 2026, which edk2-stable202508's
+    # BaseTools can't detect; windows-2022 keeps VS2022
+    runs-on: windows-2022
 
     env:
       TOOL_CHAIN_TAG: VS2022
