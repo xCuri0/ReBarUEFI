@@ -34,7 +34,7 @@ The module is added to the UEFI firmware's DXE volume so it gets executed on eve
 The new ```PreprocessController``` function later gets called during PCI enumeration by the ```PciBus``` module which will detect the new BAR size and allocate it accordingly.
 
 ## AliExpress X99 Tutorial by Miyconst
-[![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjEE "Resizable BAR on LGA 2011-3 X99")
+[![Resizable BAR on LGA 2011-3 X99](http://img.youtube.com/vi/vcJDWMpxpjE/0.jpg)](http://www.youtube.com/watch?v=vcJDWMpxpjE "Resizable BAR on LGA 2011-3 X99")
 
 Instructions for applying UEFIPatch not included as it isn't required for these X99 motherboards. You can follow them below.
 

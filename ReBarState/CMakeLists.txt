@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : CMake project for ReBarState, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.10)
 
 project ("ReBarState")
 set(CMAKE_CXX_STANDARD 17)
