@@ -171,6 +171,24 @@ UINT32 pciRebarGetPossibleSizes(UINTN pciAddress, UINTN epos, UINT16 vid, UINT16
     return cap >> 4;
 }
 
+UINT32 pciRebarGetPossibleSizesAtPos(UINTN pciAddress, INTN pos, UINT16 vid, UINT16 did, UINT8 bar)
+{
+    UINT32 cap;
+
+    if (pos < 0)
+        return 0;
+
+    pciReadConfigDword(pciAddress, pos + PCI_REBAR_CAP, &cap);
+    cap &= PCI_REBAR_CAP_SIZES;
+
+    /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
+    if (vid == PCI_VENDOR_ID_ATI && did == 0x731f &&
+        bar == 0 && cap == 0x7000)
+        cap = 0x3f000;
+
+    return cap >> 4;
+}
+
 INTN pciRebarSetSize(UINTN pciAddress, UINTN epos, UINT8 bar, UINT8 size)
 {
     INTN pos;
@@ -193,6 +211,7 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
     UINTN epos;
     UINT16 vid, did;
     UINTN pciAddress;
+    INTN barPos[PCI_STD_NUM_BARS];
 
     gBS->HandleProtocol(handle, &gEfiPciRootBridgeIoProtocolGuid, (void **)&pciRootBridgeIo);
 
@@ -208,9 +227,22 @@ VOID reBarSetupDevice(EFI_HANDLE handle, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADD
     epos = pciFindExtCapability(pciAddress, PCI_EXT_CAP_ID_REBAR);
     if (epos)
     {
-        for (UINT8 bar = 0; bar < 6; bar++)
+        // Cache the ReBAR slot for each BAR. Repeated config-space scans are expensive
+        // during UEFI enumeration, so reuse the resolved offset instead of re-finding it.
+        for (UINT8 bar = 0; bar < PCI_STD_NUM_BARS; bar++)
+            barPos[bar] = -1;
+
+        for (UINT8 bar = 0; bar < PCI_STD_NUM_BARS; bar++)
         {
-            UINT32 rBarS = pciRebarGetPossibleSizes(pciAddress, epos, vid, did, bar);
+            UINT32 rBarS;
+
+            if (barPos[bar] < 0)
+                barPos[bar] = pciRebarFindPos(pciAddress, (INTN)epos, bar);
+
+            if (barPos[bar] < 0)
+                continue;
+
+            rBarS = pciRebarGetPossibleSizesAtPos(pciAddress, barPos[bar], vid, did, bar);
             if (!rBarS)
                 continue;
             // start with size from fls
